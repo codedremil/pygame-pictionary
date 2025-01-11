@@ -102,4 +102,49 @@ class Client:
 
         return msg['names']
 
+    def new_game(self):
+        self.cmd_channel.send_new_game()
+        msg = self.cmd_channel.get_message()
+        if not msg: return None
+
+        if msg['rc'] != "OK":
+            logging.error(f"Protocol error (new_game): {msg['msg']}")
+
+    def start_game(self):
+        self.cmd_channel.send_start_game(self.game_name)
+        msg = self.cmd_channel.get_message()
+        if not msg: return None
+
+        if msg['rc'] != "OK" or 'word' not in msg:
+            logging.error(f"Protocol error (start_game): {msg['msg']}")
+            return None
+
+        return msg['word']
+
+    def join_game(self, game_name):
+        self.cmd_channel.send_join_game(game_name)
+        msg = self.cmd_channel.get_message()
+        if not msg: return None
+
+        if msg['rc'] != "OK":
+            logging.error(f"Protocol error (join_game): {msg['msg']}")
+
+    def leave_game(self, game_name):
+        self.cmd_channel.send_leave_game(game_name)
+        msg = self.cmd_channel.get_message()
+        if not msg: return None
+
+        if msg['rc'] != "OK":
+            logging.error(f"Protocol error (leave_game): {msg['msg']}")
+
+    def get_list_game_players(self):
+        self.cmd_channel.send_list_game_players(self.game_name)
+        msg = self.cmd_channel.get_message()
+        if not msg: return []
+
+        if msg['rc'] != "OK" or 'names' not in msg:
+            logging.error("Protocol error (get_list_game_players): {msg['msg']}")
+            return []
+
+        return msg['names']
 

@@ -188,11 +188,82 @@ class Server:
             names = list(self.games)
             proto.send_resp_list_games(len(self.games), sorted(names))
 
+    def recv_join_game(self, player, proto, msg):
+        logging.debug("recv_join_game called")
+        if "game_name" not in msg:
+            logging.error("protocol error")
+            proto.send_message_error("Il manque le nom du jeu !")
+            return
+
+        logging.info(f"player {player.name} joins game {msg['game_name']}")
+
+        # Ajoute le joueur au jeu
+        with self.lock_games:
+            game_name = msg['game_name']
+            if game_name not in self.games:
+                logging.error(f"game {game_name} unknown")
+                proto.send_message_error("Le nom du jeu est inconnu !")
+                return
+
+            game = self.games[game_name]
+            game.add_player(player)
+            # Répond au joueur
+            proto.send_resp_join_game()
+
+            # Indique l'événement à tous les joueurs
+            for player_name in game.players:
+                self.players[player_name].event_channel.send_event_join_game(player.name)
+
+    def recv_leave_game(self, player, proto, msg):
+        logging.debug("recv_leave_game called")
+        if "game_name" not in msg:
+            logging.error("protocol error")
+            proto.send_message_error("Il manque le nom du jeu !")
+            return
+
+        logging.info(f"player {player.name} left game {msg['game_name']}")
+
+        # Supprime le joueur du jeu
+        with self.lock_games:
+            game_name = msg['game_name']
+            if game_name not in self.games:
+                logging.error(f"game {game_name} unknown")
+                proto.send_message_error("Le nom du jeu est inconnu !")
+                return
+
+            game = self.games[game_name]
+            game.remove_player(player)
+            proto.send_resp_leave_game()
+
+            # Indique l'événement à tous les joueurs
+            for player_name in game.players:
+                self.players[player_name].event_channel.send_event_leave_game(player.name)
+
+    def recv_start_game(self, player, proto, msg):
+        logging.debug("recv_start_game called")
+        if "game_name" not in msg:
+            logging.error("protocol error")
+            proto.send_message_error("Il manque le nom du jeu !")
+            return
+
+        # TODO: utilise un dictionnaire !
+        player.game.word_to_guess = "téléphone"
+        proto.send_resp_start_game("téléphone")
+
+        # Indique l'événement à tous les joueurs
+        for player_name in player.game.players:
+            self.players[player_name].event_channel.send_event_start_game()
+
 
 # Liste des commandes
 proto_commands = {
     Protocol.CLI_SEND_LIST_PLAYERS: Server.recv_list_players,
     Protocol.CLI_SEND_LIST_GAMES: Server.recv_list_games,
+    Protocol.CLI_SEND_LIST_GAME_PLAYERS: Server.recv_list_game_players,
+    Protocol.CLI_SEND_NEW_GAME: Server.recv_new_game,
+    Protocol.CLI_SEND_JOIN_GAME: Server.recv_join_game,
+    Protocol.CLI_SEND_LEAVE_GAME: Server.recv_leave_game,
+    Protocol.CLI_SEND_START_GAME: Server.recv_start_game,
 }
 
 if __name__ == '__main__':
