@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
 
 import threading
 import socket
-import time
 import logging
 import traceback
 from player import Player
@@ -36,7 +35,7 @@ class Server:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
 
-        logging.info(f'Server is listing on the port {self.port}...')
+        logging.info(f'Server is listening on the port {self.port}...')
         self.sock.listen()
 
         while True:
@@ -162,7 +161,6 @@ class Server:
 
         proto.send_resp_new_game()
 
-
     def recv_list_game_players(self, player, proto, msg):
         logging.debug("recv_list_game_players called")
         if "game_name" not in msg:
@@ -254,6 +252,16 @@ class Server:
         for player_name in player.game.players:
             self.players[player_name].event_channel.send_event_start_game()
 
+    def recv_guess_word(self, player, proto, msg):
+        logging.debug("recv_guess_word")
+        if "word" not in msg:
+            logging.error("protocol error")
+            proto.send_message_error("Il manque le mot à deviner !")
+            return
+
+        found = player.game.word_to_guess == msg['word']
+        proto.send_resp_guess_word(found)
+
 
 # Liste des commandes
 proto_commands = {
@@ -264,6 +272,7 @@ proto_commands = {
     Protocol.CLI_SEND_JOIN_GAME: Server.recv_join_game,
     Protocol.CLI_SEND_LEAVE_GAME: Server.recv_leave_game,
     Protocol.CLI_SEND_START_GAME: Server.recv_start_game,
+    Protocol.CLI_SEND_GUESS_WORD: Server.recv_guess_word,
 }
 
 if __name__ == '__main__':

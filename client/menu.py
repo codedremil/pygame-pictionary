@@ -11,10 +11,16 @@ from protocol import Protocol
 class Menu:
     def __init__(self, client):
         self.client = client
+        self.client.set_callback(Protocol.EVENT_ERROR, self.recv_error)
+        self.client.set_callback(Protocol.EVENT_START_GAME, self.recv_event_start_game)
+        self.client.set_callback(Protocol.EVENT_JOIN_GAME, self.recv_event_join_game)
+        self.client.set_callback(Protocol.EVENT_LEAVE_GAME, self.recv_event_leave_game)
         self.game_created = False
         self.game_joined = False
         self.game_started = False
-
+        self.is_master = False  # True si on doit faire deviner
+        self.word_to_guess = None
+        self.active_games = None  # liste des jeux auxquels on peut participer
 
     def run(self):
         '''Affiche l'interface texte de connexion au jeu'''
@@ -26,6 +32,8 @@ class Menu:
             if not self.game_created and not self.game_joined:
                 print("4-Créer une nouvelle partie")
                 print("5-Joindre une partie")
+            if self.game_started and not self.is_master:
+                print("6-Deviner le mot")
             if self.game_created or self.game_joined:
                 print("7-Quitter la partie")
                 print("8-Voir la liste des joueurs de la partie")
@@ -44,6 +52,7 @@ class Menu:
                 2: self.get_list_games,
                 4: self.new_game,
                 5: self.join_game,
+                6: self.guess_word,
                 7: self.leave_game,
                 8: self.get_list_game_players,
                 9: self.start_game,
@@ -118,4 +127,25 @@ class Menu:
     def leave_game(self):
         self.client.leave_game(self.client.game_name)
         self.game_joined = False
+
+    def recv_event_start_game(self):
+        logging.info("Le jeu a démarré !")
+        self.game_started = True
+
+    def recv_event_join_game(self, player_name):
+        logging.info(f"{player_name} a rejoint le jeu")
+
+    def recv_event_leave_game(self, player_name):
+        logging.info(f"{player_name} a quitté le jeu")
+
+    def recv_error(self, msg):
+        logging.error(msg)
+
+    def guess_word(self):
+        word = input("Quel mot ? ")
+        found = self.client.guess_word(word)
+        if found:
+            logging.info("Bravo !")
+        else:
+            logging.info("et non...")
 

@@ -21,7 +21,12 @@ class Client:
         self.event_channel = None
         self.thread = None
         self.callbacks = {}  # user callbacks
-        self._callbacks = {} # callbacks pour les événements
+        self._callbacks = {
+            Protocol.EVENT_ERROR: self.recv_error,
+            Protocol.EVENT_START_GAME: self.recv_event_start_game,
+            Protocol.EVENT_JOIN_GAME: self.recv_event_join_game,
+            Protocol.EVENT_LEAVE_GAME: self.recv_event_leave_game,
+        }
         self.connect()
 
     def connect(self):
@@ -74,11 +79,14 @@ class Client:
                 logging.error(f"_callback missing for command {cmd}")
                 continue
 
-            # if cmd not in self.callbacks:
-            #     logging.error(f"callback missing for command {cmd}")
-            #     continue
+            if cmd not in self.callbacks:
+                logging.error(f"callback missing for command {cmd}")
+                continue
 
             self._callbacks[cmd](msg)
+
+    def set_callback(self, cmd, func, *args, **kwargs):
+        self.callbacks[cmd] = {"func": func, "args": args, "kwargs": kwargs}
 
     def get_list_players(self):
         self.cmd_channel.send_list_players()
@@ -147,4 +155,35 @@ class Client:
             return []
 
         return msg['names']
+
+    def recv_error(self, msg):
+        self.callbacks[Protocol.EVENT_ERROR]['func'](msg['msg'])
+
+    def recv_event_start_game(self, msg):
+        self.callbacks[Protocol.EVENT_START_GAME]['func']()
+
+    def recv_event_join_game(self, msg):
+        if msg['rc'] != "OK" or 'name' not in msg:
+            logging.error(f"Protocol error (recv_list_games): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_JOIN_GAME]['func'](msg['name'])
+
+    def recv_event_leave_game(self, msg):
+        if msg['rc'] != "OK" or 'name' not in msg:
+            logging.error(f"Protocol error (recv_list_games): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_LEAVE_GAME]['func'](msg['name'])
+
+    def guess_word(self, word):
+        self.cmd_channel.send_guess_word(word)
+        msg = self.cmd_channel.get_message()
+        if not msg: return False
+
+        if msg['rc'] != "OK" or 'found' not in msg:
+            logging.error("Protocol error (guess_word): {msg['msg']}")
+            return False
+
+        return msg['found']
 
