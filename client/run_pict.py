@@ -12,13 +12,13 @@ from settings import HOST, PORT
 
 def main():
     '''Affiche l'interface texte de connexion au jeu'''
-    player_name = input("Donnez votre nom de joueur: ")
-    try:
-        client = Client(player_name, HOST, PORT)
-    except Exception as e:
-        print(e)
-        raise e
-        exit(0)
+    while True:
+        player_name = input("Donnez votre nom de joueur: ")
+        try:
+            client = Client(player_name, HOST, PORT)
+            break
+        except Exception as e:
+            print(e)
 
     menu = Menu(client)
     menu.run()

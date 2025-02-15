@@ -11,10 +11,11 @@ import threading
 import socket
 import logging
 import traceback
+from random import choice
 from player import Player
 from game import Game
 from protocol import Protocol
-from settings import HOST, PORT
+from settings import HOST, PORT, dictionary
 
 
 class Server:
@@ -60,32 +61,45 @@ class Server:
         try:
             proto = Protocol(conn)
 
-            # il faut obtenir le nom du joueur
-            # TODO: tester l'unicité du nom du joueur ?
-            msg = proto.get_message()
-            if msg['cmd'] != Protocol.CLI_SEND_NEW_PLAYER:
-                raise f"Wrong message type {msg['cmd']}"
+            # il faut obtenir le nom du joueur et tester l'unicité du nom du joueur 
+            while True:
+                msg = proto.get_message()
+                if 'cmd' not in msg:
+                    raise Exception(f"cmd missing - wrong Protocol")
 
-            player_name = msg['name']
-            conn_type = msg['type']
-            logging.info(f"Player name is: {player_name}")
+                if msg['cmd'] != Protocol.CLI_SEND_NEW_PLAYER:
+                    raise Exception(f"Wrong message type {msg['cmd']}")
 
-            if conn_type == Protocol.TYPE_CMD:
-                player = Player(player_name, proto)
-                self.add_player(player)
-                proto.send_message_ok({})
-                self.handle_protocol(player, proto)
-            elif conn_type == Protocol.TYPE_EVENT:
-                # Cherche le player pour lui associer la 2ème cnx
-                self.players[player_name].set_event_channel(proto)
-                self.players[player_name].cmd_channel.send_message_ok({})
-                while True:
-                    msg = proto.get_message()
-                    logging.debug(f"recvd event message: {msg}")
-                    if not msg:
+                player_name = msg['name']
+                conn_type = msg['type']
+                logging.info(f"Player name is: {player_name} [{conn_type=}]")
+
+                if conn_type == Protocol.TYPE_CMD:
+                    if self.is_name_available(player_name):
+                        player = Player(player_name, proto)
+                        self.add_player(player)
+                        proto.send_message_ok({})
+                        self.handle_protocol(player, proto)
                         break
-            else:
-                raise f"Wrong connection type {conn_type}"
+
+                    logging.error(f"Nom de joueur {player_name} déjà pris !")
+                    proto.send_message_error("Ce nom de joueur est déjà pris !")
+                elif conn_type == Protocol.TYPE_EVENT:
+                    # Cherche le player pour lui associer la 2ème cnx
+                    if self.players[player_name].get_event_channel():
+                        raise Exception(f"Event_channel déjà associé au joueur {player_name}")
+
+                    self.players[player_name].set_event_channel(proto)
+                    self.players[player_name].cmd_channel.send_message_ok({})
+                    while True:
+                        msg = proto.get_message()
+                        logging.debug(f"rcvd event message: {msg}")
+                        if not msg:
+                            break
+
+                    break
+                else:
+                    raise Exception(f"Wrong connection type: {conn_type}")
         except Exception as e:
             logging.error(f"Exception in new_player {e}")
             traceback.print_stack()
@@ -95,6 +109,10 @@ class Server:
             self.remove_player(player)
 
         conn.close()
+
+    def is_name_available(self, name):
+        with self.lock_players:
+            return name not in self.players
 
     def add_player(self, player):
         logging.debug(f"add player {player.name}")
@@ -107,7 +125,7 @@ class Server:
         with self.lock_players:
             del self.players[player_name]
 
-        '''
+        # JD: vérifier le code déjà fait
         # Supprime l'utilisateur de tous les jeux
         with self.lock_games:
             for game_name, game in self.games.items():
@@ -118,12 +136,11 @@ class Server:
                         self.players[other_player_name].event_channel.send_event_leave_game(player_name)
                     break  # un seul jeu par joueur
 
-        # Si le joueur possède un jeu, il faut détruire le jeu !
+        # Si le joueur possède un jeu, il faut détruire le jeu !?
         with self.lock_games:
             if player_name in self.games:
                 logging.debug("player owned a game which is deleted")
                 del self.games[player_name]
-        '''
 
     def handle_protocol(self, player, proto):
         '''Gère les échanges avec un joueur'''
@@ -160,6 +177,12 @@ class Server:
             self.games[player.name] = Game(player)
 
         proto.send_resp_new_game()
+
+        # JD
+        # Indique l'événement à tous les joueurs
+        with self.lock_players:
+            for player_name in self.players:
+                self.players[player_name].event_channel.send_event_new_game(player.name)
 
     def recv_list_game_players(self, player, proto, msg):
         logging.debug("recv_list_game_players called")
@@ -244,9 +267,8 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        # TODO: utilise un dictionnaire !
-        player.game.word_to_guess = "téléphone"
-        proto.send_resp_start_game("téléphone")
+        player.game.word_to_guess = choice(dictionary)
+        proto.send_resp_start_game(player.game.word_to_guess)
 
         # Indique l'événement à tous les joueurs
         for player_name in player.game.players:
@@ -278,8 +300,16 @@ proto_commands = {
 if __name__ == '__main__':
     host = HOST
     port = PORT
+    LOG_LEVEL = 'LOG_LEVEL'
 
-    logging.basicConfig(level=logging.DEBUG)
+    log_level = logging.INFO
+    levels = logging.getLevelNamesMapping()
+
+    if LOG_LEVEL in os.environ:
+        if os.environ[LOG_LEVEL] in levels:
+            log_level = levels[os.environ[LOG_LEVEL]]
+
+    logging.basicConfig(level=log_level)
 
     server = Server(host, port)
     server.start()

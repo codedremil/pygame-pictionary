@@ -5,6 +5,9 @@ class Player:
         self.event_channel = None
         self.game = None
 
+    def get_event_channel(self):
+        return self.event_channel
+
     def set_event_channel(self, proto):
         self.event_channel = proto
 

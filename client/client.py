@@ -23,6 +23,7 @@ class Client:
         self.callbacks = {}  # user callbacks
         self._callbacks = {
             Protocol.EVENT_ERROR: self.recv_error,
+            Protocol.EVENT_NEW_GAME: self.recv_event_new_game, # JD
             Protocol.EVENT_START_GAME: self.recv_event_start_game,
             Protocol.EVENT_JOIN_GAME: self.recv_event_join_game,
             Protocol.EVENT_LEAVE_GAME: self.recv_event_leave_game,
@@ -38,7 +39,9 @@ class Client:
             self.cmd_channel.send_new_cmd_player(self.name)
             response = self.cmd_channel.get_message()
             logger.debug(f"Response: {response}")
-            # TODO: tester que "rc" == "OK"
+            if response['rc'] != "OK":
+                logging.error(response['msg'])
+                raise Exception("Protocol Error")
 
             # Crée le channel pour les événements et lance un thread de gestion
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,7 +50,9 @@ class Client:
             self.event_channel.send_new_event_player(self.name)
             response = self.cmd_channel.get_message()
             logging.debug(f"Response: {response}")
-            # TODO: tester que "rc" == "OK"
+            if response['rc'] != "OK":
+                logging.error(response['msg'])
+                raise Exception("Protocol Error")
 
             self.thread = threading.Thread(target=self.receive_event_loop, args=())
             self.thread.setDaemon(True) # sinon, on ne peut quitter le pgm car le Thread l'empêche !
@@ -145,8 +150,12 @@ class Client:
         if msg['rc'] != "OK":
             logging.error(f"Protocol error (leave_game): {msg['msg']}")
 
-    def get_list_game_players(self):
-        self.cmd_channel.send_list_game_players(self.game_name)
+    # JD: hack sur le nom du game
+    def get_list_game_players(self, game_name=None):
+        if game_name is None:
+            game_name = self.game_name
+
+        self.cmd_channel.send_list_game_players(game_name)
         msg = self.cmd_channel.get_message()
         if not msg: return []
 
@@ -158,6 +167,14 @@ class Client:
 
     def recv_error(self, msg):
         self.callbacks[Protocol.EVENT_ERROR]['func'](msg['msg'])
+
+    # JD
+    def recv_event_new_game(self, msg):
+        if msg['rc'] != "OK" or 'name' not in msg:
+            logger.error(f"Protocol error (recv_event_new_game): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_NEW_GAME]['func'](msg['name'])
 
     def recv_event_start_game(self, msg):
         self.callbacks[Protocol.EVENT_START_GAME]['func']()

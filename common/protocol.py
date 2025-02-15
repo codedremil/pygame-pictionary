@@ -32,6 +32,7 @@ class Protocol:
 
     # Evenements possibles (Server => Client)
     EVENT_ERROR = "EVENT_ERROR"
+    EVENT_NEW_GAME = "EVENT_NEW_GAME"     # send = {name}   # = game_name # JD
     EVENT_JOIN_GAME = "EVENT_JOIN_GAME"     # send = {name}   # = player_name
     EVENT_LEAVE_GAME = "EVENT_LEAVE_GAME"   # send = {name}   # = player_name
     EVENT_START_GAME = "EVENT_START_GAME"   # send = {}
@@ -74,8 +75,10 @@ class Protocol:
         response =  {"rc": "OK", **dict_msg}
         self.conn.sendall(json.dumps(response).encode('utf-8') + b'\n')
 
-    def send_message_error(self, msg, dict_msg):
-        response =  {"rc": "ERROR", "cmd": Protocol.EVENT_ERROR, "msg": msg, **dict_msg}
+    #def send_message_error(self, msg, dict_msg):
+    def send_message_error(self, msg):
+        #response =  {"rc": "ERROR", "cmd": Protocol.EVENT_ERROR, "msg": msg, **dict_msg}
+        response =  {"rc": "ERROR", "cmd": Protocol.EVENT_ERROR, "msg": msg}
         self.conn.sendall(json.dumps(response).encode('utf-8') + b'\n')
 
     # Les requêtes proviennent du client
@@ -135,6 +138,10 @@ class Protocol:
         self.send_message_ok({"cmd": Protocol.SRV_RESP_GUESS_WORD, "found": found})
 
     # Les événements sont envoyés par le serveur
+    # JD
+    def send_event_new_game(self, player_name):
+        self.send_message_ok({"cmd": Protocol.EVENT_NEW_GAME, "name": player_name})
+
     def send_event_join_game(self, player_name):
         self.send_message_ok({"cmd": Protocol.EVENT_JOIN_GAME, "name": player_name})
 
