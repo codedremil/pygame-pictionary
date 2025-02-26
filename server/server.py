@@ -106,6 +106,7 @@ class Server:
             raise e
 
         if player:
+            logging.info(f"player {player.name} removed")
             self.remove_player(player)
 
         conn.close()
@@ -136,7 +137,7 @@ class Server:
                         self.players[other_player_name].event_channel.send_event_leave_game(player_name)
                     break  # un seul jeu par joueur
 
-        # Si le joueur possède un jeu, il faut détruire le jeu !?
+        # TODO: Si le joueur possède un jeu, il faut détruire le jeu s'il n'a pas démarré !?
         with self.lock_games:
             if player_name in self.games:
                 logging.debug("player owned a game which is deleted")
@@ -281,9 +282,23 @@ class Server:
             proto.send_message_error("Il manque le mot à deviner !")
             return
 
+        logging.debug(f"{player.game.word_to_guess=}, {msg['word']=}")
         found = player.game.word_to_guess == msg['word']
         proto.send_resp_guess_word(found)
 
+        if found:
+            # Indique l'événement à tous les joueurs
+            for player_name in player.game.players:
+                self.players[player_name].event_channel.send_word_found(player.name, player.game.word_to_guess)
+
+    # JD
+    def recv_draw(self, player, proto, msg):
+        logging.debug("recv_draw {msg=}")
+
+        # Indique l'événement à tous les autres joueurs
+        for player_name in player.game.players:
+            if player.name != player_name:
+                self.players[player_name].event_channel.send_event_draw(msg)
 
 # Liste des commandes
 proto_commands = {
@@ -295,6 +310,7 @@ proto_commands = {
     Protocol.CLI_SEND_LEAVE_GAME: Server.recv_leave_game,
     Protocol.CLI_SEND_START_GAME: Server.recv_start_game,
     Protocol.CLI_SEND_GUESS_WORD: Server.recv_guess_word,
+    Protocol.CLI_SEND_DRAW: Server.recv_draw,
 }
 
 if __name__ == '__main__':

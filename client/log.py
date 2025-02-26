@@ -26,7 +26,7 @@ class InterceptingQueueListener(logging.handlers.QueueListener):
 
 
 class Logger:
-    def __init__(self, widget):
+    def __init__(self, log_level, widget):
         # Create a queue to hold log records.
         log_queue = queue.Queue()
 
@@ -44,7 +44,7 @@ class Logger:
         # Configure the root logger to use QueueHandler, sending all logs to the queue.
         root_logger = logging.getLogger()
         queue_handler = logging.handlers.QueueHandler(log_queue)
-        root_logger.setLevel(logging.DEBUG)
+        root_logger.setLevel(log_level)
         root_logger.addHandler(queue_handler)
 
     def __del__(self):

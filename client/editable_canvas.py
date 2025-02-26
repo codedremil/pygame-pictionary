@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pathlib import Path
 import copy
+import logging
 
 import pygame
 import pygame_gui
@@ -10,12 +11,14 @@ from pygame_gui import UI_BUTTON_PRESSED
 
 
 DEFAULT_THICKNESS = 5
-BLACK = (0, 0, 0)
+BLACK = pygame.Color(0, 0, 0)
 DEFAULT_COLOR = BLACK
 
+logger = logging.getLogger()
 
 class EditableCanvas(pygame_gui.core.ui_element.UIElement):
-    def __init__(self, relative_rect, image_surface, manager,
+    # JD: ajout de pict_game
+    def __init__(self, pict_game, relative_rect, image_surface, manager, lock,
                  container=None, parent=None, object_id=None, anchors=None):
         super().__init__(relative_rect=relative_rect,
                          manager=manager,
@@ -28,16 +31,18 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
                                object_id=object_id,
                                element_id='editable_canvas')
         self.set_image(image_surface)
-        self.empty_image = image_surface # pour le "clean"
-        self.active_tool = None
+        self.empty_image = image_surface # pour le "clear"
+        #self.active_tool = None
         self.can_draw = False
         self.clicked = False
         self.last_clicked_pos = None
         self.thickness = DEFAULT_THICKNESS
         self.color = DEFAULT_COLOR
+        self.pict_game = pict_game # JD
+        self.lock = lock
 
-    def set_active_tool(self, tool):
-        self.active_tool = tool
+    #def set_active_tool(self, tool):
+    #    self.active_tool = tool
 
     def process_event(self, event: pygame.event.Event) -> bool:
         '''Retourne True si l'événement est consommé'''
@@ -45,7 +50,7 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
             return False
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # Doit prendre en compte l'événement seulement si la souris est dans la fenetre
+            # Doit prendre en compte l'événement seulement si la souris est dans la fenetre et si la position a changé
             mouse_pos = self.ui_manager.get_mouse_position()
             if self.relative_rect.collidepoint(mouse_pos):
                 rect = self.get_abs_rect()
@@ -57,6 +62,7 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
                     self.thickness) # thickness
                 self.clicked = True
                 self.last_clicked_pos = mouse_pos
+                logger.debug(f"{mouse_pos[0]=},{mouse_pos[1]=},{rect.left=},{rect.top=}")
                 return True
 
             return False
@@ -64,10 +70,11 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
         if event.type == pygame.MOUSEBUTTONUP:
             self.clicked = False
             self.last_clicked_pos = None
+            self.pict_game.network.send_plot(-1, -1, self.color)    # JD button up
             return False
 
         if event.type == pygame.MOUSEMOTION and self.clicked:
-            # Doit prendre en compte l'événement seulement si la souris est dans la fenetre
+            # Doit prendre en compte l'événement seulement si la souris est dans la fenetre et a changé de position
             mouse_pos = self.ui_manager.get_mouse_position()
             if self.relative_rect.collidepoint(mouse_pos):
                 rect = self.get_abs_rect()
@@ -87,7 +94,13 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
                     self.thickness # thickness
                 )
                 self.clicked = True
+                if self.last_clicked_pos and mouse_pos == self.last_clicked_pos:
+                    return True
+
                 self.last_clicked_pos = mouse_pos
+                logger.debug(f"{mouse_pos[0]=},{mouse_pos[1]=},{rect.left=},{rect.top=}")
+                # self.color n'est pas sérailisable en JSON, on transforme en RGB
+                self.pict_game.network.send_plot(mouse_pos[0] - rect.left, mouse_pos[1] - rect.top, self.color)
                 return True
 
             return False
@@ -100,7 +113,43 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
     def set_image(self, new_image: Optional[pygame.surface.Surface]) -> None:
         self._set_image(new_image)
 
-    def clean(self):
+    def clear(self):
         #self.set_image(copy.copy(self.empty_image))
         self.set_image(self.empty_image)
+
+    def set_color(self, color):
+        self.color = color
+
+    # JD
+    def draw(self, dict_msg):
+        with self.lock:
+            '''Drawing event handling'''
+            x = dict_msg['x']
+            y = dict_msg['y']
+            color = dict_msg['color']
+            rect = self.get_abs_rect()
+
+            if x == -1 and y == -1: # Pen is up
+                self.last_clicked_pos = None
+                return 
+
+            x, y = x - rect.left, y - rect.top
+
+            if self.last_clicked_pos:
+                pygame.draw.line(
+                    self.image,
+                    color,
+                    #(self.last_clicked_pos[0] + rect.left, self.last_clicked_pos[1] + rect.top),
+                    (self.last_clicked_pos[0], self.last_clicked_pos[1]),
+                    (x + rect.left, y + rect.top),
+                    self.thickness + 2 # thickness
+                )
+            pygame.draw.circle(
+                self.image,
+                color,
+                (x + rect.left, y + rect.top),
+                self.thickness - 1, # radius
+                self.thickness # thickness
+            )
+            self.last_clicked_pos = (x + rect.left, y + rect.top)
 

@@ -19,6 +19,8 @@ class Game:
 
     def remove_player(self, player):
         with self.lock_players:
-            self.players.remove(player.name)
+            if player.name in self.players:
+                self.players.remove(player.name)
+
             player.set_game(None)
 

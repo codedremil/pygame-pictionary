@@ -19,6 +19,7 @@ class Protocol:
     CLI_SEND_JOIN_GAME = "CLI_SEND_JOIN_GAME"     # send = {game_name}
     CLI_SEND_LEAVE_GAME = "CLI_SEND_LEAVE_GAME"   # send = {game_name}
     CLI_SEND_GUESS_WORD = "CLI_SEND_GUESS_WORD"   # send = {word}
+    CLI_SEND_DRAW = "CLI_SEND_DRAW"               # send = {x, y, color} # JD
 
     # Réponses possibles (Serveur => Client)
     SRV_RESP_LIST_PLAYERS = "SRV_RESP_LIST_PLAYERS"     # send = {count, names}
@@ -37,7 +38,8 @@ class Protocol:
     EVENT_LEAVE_GAME = "EVENT_LEAVE_GAME"   # send = {name}   # = player_name
     EVENT_START_GAME = "EVENT_START_GAME"   # send = {}
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {winner}
-    EVENT_PLOT = "EVENT_PLOT"               # send = {x, y, word}
+    EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
+    EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
 
 
     def __init__(self, conn):
@@ -112,6 +114,9 @@ class Protocol:
     def send_guess_word(self, word):
         self.send_message({"cmd": Protocol.CLI_SEND_GUESS_WORD, "word": word})
 
+    def send_draw(self, dict_msg):
+        self.send_message({"cmd": Protocol.CLI_SEND_DRAW, **dict_msg})
+
     # Ces réponses sont envoyées par le serveur
     def send_resp_join_game(self):
         self.send_message_ok({"cmd": Protocol.SRV_RESP_JOIN_GAME})
@@ -154,6 +159,13 @@ class Protocol:
     def send_event_guess_word(self, word):
         self.send_message_ok({"cmd": Protocol.EVENT_GUESS_WORD, "word": word})
 
-    def send_event_plot(self, x, y, color):
-        self.send_message_ok({"cmd": Protocol.EVENT_PLOT, "x": x, "y": y, "color": color})
+    def send_word_found(self, winner, word):
+        self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner})
+
+    # JD
+    def send_event_draw(self, dict_msg):
+        if 'cmd' in dict_msg:
+            del dict_msg['cmd']
+
+        self.send_message_ok({"cmd": Protocol.EVENT_DRAW, **dict_msg})
 

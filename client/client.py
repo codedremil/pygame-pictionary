@@ -27,6 +27,8 @@ class Client:
             Protocol.EVENT_START_GAME: self.recv_event_start_game,
             Protocol.EVENT_JOIN_GAME: self.recv_event_join_game,
             Protocol.EVENT_LEAVE_GAME: self.recv_event_leave_game,
+            Protocol.EVENT_DRAW: self.recv_event_draw, # JD
+            Protocol.EVENT_WORD_FOUND: self.recv_event_word_found,
         }
         self.connect()
 
@@ -118,10 +120,13 @@ class Client:
     def new_game(self):
         self.cmd_channel.send_new_game()
         msg = self.cmd_channel.get_message()
-        if not msg: return None
+        if not msg: return False # JD
 
         if msg['rc'] != "OK":
             logging.error(f"Protocol error (new_game): {msg['msg']}")
+            return False # JD
+
+        return True # JD
 
     def start_game(self):
         self.cmd_channel.send_start_game(self.game_name)
@@ -165,6 +170,17 @@ class Client:
 
         return msg['names']
 
+    # JD:
+    def send_plot(self, x, y, color):
+        '''color est un tuple (R, G, B)'''
+        if type(color) is not tuple:
+            color = tuple(color)
+        self.cmd_channel.send_draw({"action": "plot", "x": x, "y": y, "color": color})
+
+    # JD:
+    def send_clear(self):
+        self.cmd_channel.send_draw({"action": "clear"})
+
     def recv_error(self, msg):
         self.callbacks[Protocol.EVENT_ERROR]['func'](msg['msg'])
 
@@ -181,17 +197,32 @@ class Client:
 
     def recv_event_join_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logging.error(f"Protocol error (recv_list_games): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_join_game): {msg['msg']}")
             return
 
         self.callbacks[Protocol.EVENT_JOIN_GAME]['func'](msg['name'])
 
     def recv_event_leave_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logging.error(f"Protocol error (recv_list_games): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_leave_game): {msg['msg']}")
             return
 
         self.callbacks[Protocol.EVENT_LEAVE_GAME]['func'](msg['name'])
+
+    # JD
+    def recv_event_draw(self, msg):
+        if msg['rc'] != "OK":
+            logging.error(f"Protocol error (recv_event_draw): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_DRAW]['func'](msg)
+
+    def recv_event_word_found(self, msg):
+        if msg['rc'] != "OK" or "winner" not in msg or "word" not in msg:
+            logging.error(f"Protocol error (recv_event_word_found): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_WORD_FOUND]['func'](msg['winner'], msg['word'])
 
     def guess_word(self, word):
         self.cmd_channel.send_guess_word(word)
