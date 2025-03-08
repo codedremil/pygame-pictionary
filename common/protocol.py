@@ -55,17 +55,19 @@ class Protocol:
             # Les messages peuvent arriver en plusieurs "morceaux", 
             # il faut attendre le \n final
             while True:
+                # Test si le buffer contient un reliquat de ligne
+                if '\n' in self._buffer:
+                    data, self._buffer = self._buffer.split('\n', 1)
+                    json_data = json.loads(data)
+                    logging.debug(f"got line: {json_data=}")
+                    break
+
                 chunk = self.conn.recv(1024).decode('utf-8')
                 logging.debug(f"{chunk=}")
                 if not chunk:
                     break
 
                 self._buffer += chunk
-                if '\n' in self._buffer:
-                    data, self._buffer = self._buffer.split('\n', 1)
-                    json_data = json.loads(data)
-                    logging.debug(f"got line: {json_data=}")
-                    break
         except Exception as e:
             logging.error(f"get_message: {e}")
             raise e
