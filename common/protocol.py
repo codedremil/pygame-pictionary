@@ -116,6 +116,7 @@ class Protocol:
         self.send_message({"cmd": Protocol.CLI_SEND_GUESS_WORD, "word": word})
 
     def send_draw(self, dict_msg):
+        logging.debug(f"send_draw {dict_msg}")
         self.send_message({"cmd": Protocol.CLI_SEND_DRAW, **dict_msg})
 
     # Ces réponses sont envoyées par le serveur

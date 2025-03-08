@@ -174,6 +174,7 @@ class Client:
         '''color est un tuple (R, G, B)'''
         if type(color) is not tuple:
             color = tuple(color)
+
         self.cmd_channel.send_draw({"action": "plot", "x": x, "y": y, "color": color})
 
     def send_clear(self):

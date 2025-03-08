@@ -49,6 +49,7 @@ class Server:
         Quand le client se connecte on démarre un nouveau Thread pour le gérer.
         '''
         conn, addr = self.sock.accept()
+        conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's Algorithm
         logging.debug("New connection !")
 
         # Quand le Thread démarre, il appelle la méthode new_connection() !
