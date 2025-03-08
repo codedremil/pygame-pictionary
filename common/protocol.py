@@ -48,6 +48,7 @@ class Protocol:
         self._buffer = ''
 
     def get_message(self):
+        logging.debug("-> get_message")
         json_data = {}
 
         try:
@@ -55,6 +56,7 @@ class Protocol:
             # il faut attendre le \n final
             while True:
                 chunk = self.conn.recv(1024).decode('utf-8')
+                logging.debug(f"{chunk=}")
                 if not chunk:
                     break
 
@@ -62,6 +64,7 @@ class Protocol:
                 if '\n' in self._buffer:
                     data, self._buffer = self._buffer.split('\n', 1)
                     json_data = json.loads(data)
+                    logging.debug(f"got line: {json_data=}")
                     break
         except Exception as e:
             logging.error(f"get_message: {e}")
