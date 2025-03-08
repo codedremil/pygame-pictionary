@@ -3,6 +3,7 @@ Implémente le serveur de jeu
 '''
 import sys
 import os
+import time
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
@@ -15,7 +16,7 @@ from random import choice
 from player import Player
 from game import Game
 from protocol import Protocol
-from settings import HOST, PORT, dictionary
+from settings import HOST, PORT, dictionary, COUNTDOWN
 
 
 class Server:
@@ -126,7 +127,6 @@ class Server:
         with self.lock_players:
             del self.players[player_name]
 
-        # JD: vérifier le code déjà fait
         # Supprime l'utilisateur de tous les jeux
         with self.lock_games:
             for game_name, game in self.games.items():
@@ -138,9 +138,14 @@ class Server:
                     break  # un seul jeu par joueur
 
         # TODO: Si le joueur possède un jeu, il faut détruire le jeu s'il n'a pas démarré !?
+        # Destruction du jeu côté serveur et côté joueurs
         with self.lock_games:
             if player_name in self.games:
-                logging.debug("player owned a game which is deleted")
+                logging.info(f"player {player_name} owned a game which is deleted")
+                with self.lock_players:
+                    for _, player in self.players.items():
+                        player.event_channel.send_event_end_game(player_name)
+
                 del self.games[player_name]
 
     def handle_protocol(self, player, proto):
@@ -179,7 +184,6 @@ class Server:
 
         proto.send_resp_new_game()
 
-        # JD
         # Indique l'événement à tous les joueurs
         with self.lock_players:
             for player_name in self.players:
@@ -236,6 +240,8 @@ class Server:
             for player_name in game.players:
                 self.players[player_name].event_channel.send_event_join_game(player.name)
 
+            # TODO: si le jeu a démarré et le dessin commencé, il faut envoyer le dessin courant !
+
     def recv_leave_game(self, player, proto, msg):
         logging.debug("recv_leave_game called")
         if "game_name" not in msg:
@@ -271,9 +277,13 @@ class Server:
         player.game.word_to_guess = choice(dictionary)
         proto.send_resp_start_game(player.game.word_to_guess)
 
+        # JD: démarre un thread pour le compte à rebours
+        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
+        player.game.countdown_thread.start()
+
         # Indique l'événement à tous les joueurs
-        for player_name in player.game.players:
-            self.players[player_name].event_channel.send_event_start_game()
+        #for player_name in player.game.players:
+        #    self.players[player_name].event_channel.send_event_start_game()
 
     def recv_guess_word(self, player, proto, msg):
         logging.debug("recv_guess_word")
@@ -291,14 +301,24 @@ class Server:
             for player_name in player.game.players:
                 self.players[player_name].event_channel.send_word_found(player.name, player.game.word_to_guess)
 
-    # JD
     def recv_draw(self, player, proto, msg):
-        logging.debug("recv_draw {msg=}")
+        logging.debug(f"recv_draw {msg=}")
 
         # Indique l'événement à tous les autres joueurs
         for player_name in player.game.players:
             if player.name != player_name:
                 self.players[player_name].event_channel.send_event_draw(msg)
+
+    # JD
+    def countdown(self, game, seconds):
+        while seconds:
+            time.sleep(1)
+            print("tick")
+            seconds -= 1
+
+        for player_name in game.players:
+            self.players[player_name].event_channel.send_event_start_game()
+
 
 # Liste des commandes
 proto_commands = {

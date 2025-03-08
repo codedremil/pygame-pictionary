@@ -17,7 +17,6 @@ DEFAULT_COLOR = BLACK
 logger = logging.getLogger()
 
 class EditableCanvas(pygame_gui.core.ui_element.UIElement):
-    # JD: ajout de pict_game
     def __init__(self, pict_game, relative_rect, image_surface, manager, lock,
                  container=None, parent=None, object_id=None, anchors=None):
         super().__init__(relative_rect=relative_rect,
@@ -38,7 +37,7 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
         self.last_clicked_pos = None
         self.thickness = DEFAULT_THICKNESS
         self.color = DEFAULT_COLOR
-        self.pict_game = pict_game # JD
+        self.pict_game = pict_game
         self.lock = lock
 
     #def set_active_tool(self, tool):
@@ -70,7 +69,7 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
         if event.type == pygame.MOUSEBUTTONUP:
             self.clicked = False
             self.last_clicked_pos = None
-            self.pict_game.network.send_plot(-1, -1, self.color)    # JD button up
+            self.pict_game.network.send_plot(-1, -1, self.color)    # button up
             return False
 
         if event.type == pygame.MOUSEMOTION and self.clicked:
@@ -120,7 +119,6 @@ class EditableCanvas(pygame_gui.core.ui_element.UIElement):
     def set_color(self, color):
         self.color = color
 
-    # JD
     def draw(self, dict_msg):
         with self.lock:
             '''Drawing event handling'''

@@ -19,7 +19,7 @@ class Protocol:
     CLI_SEND_JOIN_GAME = "CLI_SEND_JOIN_GAME"     # send = {game_name}
     CLI_SEND_LEAVE_GAME = "CLI_SEND_LEAVE_GAME"   # send = {game_name}
     CLI_SEND_GUESS_WORD = "CLI_SEND_GUESS_WORD"   # send = {word}
-    CLI_SEND_DRAW = "CLI_SEND_DRAW"               # send = {x, y, color} # JD
+    CLI_SEND_DRAW = "CLI_SEND_DRAW"               # send = {x, y, color}
 
     # Réponses possibles (Serveur => Client)
     SRV_RESP_LIST_PLAYERS = "SRV_RESP_LIST_PLAYERS"     # send = {count, names}
@@ -33,13 +33,14 @@ class Protocol:
 
     # Evenements possibles (Server => Client)
     EVENT_ERROR = "EVENT_ERROR"
-    EVENT_NEW_GAME = "EVENT_NEW_GAME"     # send = {name}   # = game_name # JD
+    EVENT_NEW_GAME = "EVENT_NEW_GAME"     # send = {name}   # = game_name
     EVENT_JOIN_GAME = "EVENT_JOIN_GAME"     # send = {name}   # = player_name
     EVENT_LEAVE_GAME = "EVENT_LEAVE_GAME"   # send = {name}   # = player_name
     EVENT_START_GAME = "EVENT_START_GAME"   # send = {}
-    EVENT_END_GAME = "EVENT_END_GAME"       # send = {winner}
+    EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
     EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
     EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
+    EVENT_WORD_NOT_FOUND = "EVENT_WORD_FOUND"   # send = {word} # JD
 
 
     def __init__(self, conn):
@@ -143,7 +144,6 @@ class Protocol:
         self.send_message_ok({"cmd": Protocol.SRV_RESP_GUESS_WORD, "found": found})
 
     # Les événements sont envoyés par le serveur
-    # JD
     def send_event_new_game(self, player_name):
         self.send_message_ok({"cmd": Protocol.EVENT_NEW_GAME, "name": player_name})
 
@@ -156,13 +156,15 @@ class Protocol:
     def send_event_start_game(self):
         self.send_message_ok({"cmd": Protocol.EVENT_START_GAME})
 
+    def send_event_end_game(self, game_name):
+        self.send_message_ok({"cmd": Protocol.EVENT_END_GAME, "name": game_name})
+
     def send_event_guess_word(self, word):
         self.send_message_ok({"cmd": Protocol.EVENT_GUESS_WORD, "word": word})
 
     def send_word_found(self, winner, word):
         self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner})
 
-    # JD
     def send_event_draw(self, dict_msg):
         if 'cmd' in dict_msg:
             del dict_msg['cmd']

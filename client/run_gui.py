@@ -4,8 +4,8 @@ Implémente l'interface graphique du jeu
 import sys
 import os
 import logging
-import log # JD
-import random # JD
+import log
+import random
 import threading
 import pygame
 import pygame_gui
@@ -64,11 +64,11 @@ class PictGame:
         self.player_name = ""
         # self.waiting = False
         self.network = None
-        self.user_registered = False # JD
-        self.game_created = False # JD
-        self.selected_game = None # JD: nom du jeu sélectionné dans la liste déroulante
+        self.user_registered = False
+        self.game_created = False
+        self.selected_game = None # nom du jeu sélectionné dans la liste déroulante
         self.game = None
-        self.game_started = False # JD
+        self.game_started = False
         self.status_bar = ""
         self.color = pygame.Color(255, 255, 255, 255)
         self.name_font = pygame.font.SysFont("comicsans", 80)
@@ -82,6 +82,7 @@ class PictGame:
 
         # Création du Manager
         self.manager = pygame_gui.UIManager((self.width, self.height), theme_path="gui.json")
+        self.manager.set_locale('fr')
 
         # Pour la saisie du pseudo
         w, h = POPUP_WIDTH, POPUP_HEIGHT # centré (pas beau !)
@@ -123,7 +124,7 @@ class PictGame:
             relative_rect=pygame.Rect((0, 0), (w, h)),
             manager=self.manager,
             anchors={'top': 'top', 'top_target': self.widget_game_list},
-            text='Liste des joueurs :',
+            text='Joueurs :',
         )
 
         w, h = LEFT_MENU_WIDTH, PLAYER_LIST_HEIGHT # collé en haut à gauche
@@ -135,7 +136,7 @@ class PictGame:
             item_list=[],
         )
 
-        # Pour créer et démarrer un jeu # JD
+        # Pour créer et démarrer un jeu
         w, h = LEFT_MENU_WIDTH, BUTTON_HEIGHT
         self.widget_create_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((0, 0), (w, h)),
@@ -153,7 +154,7 @@ class PictGame:
         )
         self.widget_start_button.hide()
 
-        # Pour joindre ou quitter un jeu # JD
+        # Pour joindre ou quitter un jeu
         w, h = LEFT_MENU_WIDTH, BUTTON_HEIGHT
         self.widget_join_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((0, 0), (w, h)),
@@ -191,7 +192,7 @@ class PictGame:
         new_canvas.fill(WHITE)
         canvas_window_rect = pygame.Rect((LEFT_MENU_WIDTH + SPACING, SPACING), (CANVAS_WIDTH, CANVAS_HEIGHT))
         self.canvas_window = EditableCanvas(
-            pict_game=self, # JD
+            pict_game=self,
             relative_rect=canvas_window_rect,
             manager=self.manager,
             image_surface=new_canvas,
@@ -220,12 +221,12 @@ class PictGame:
 
     def _set_callbacks(self):
         self.network.set_callback(Protocol.EVENT_NEW_GAME, self.event_new_game)
-        self.network.set_callback(Protocol.EVENT_JOIN_GAME, self.event_join_game) # JD
-        self.network.set_callback(Protocol.EVENT_LEAVE_GAME, self.event_leave_game) # JD
-        self.network.set_callback(Protocol.EVENT_START_GAME, self.event_start_game) # JD
-        #self.network.set_callback(Protocol.EVENT_END_GAME, self.event_end_game) # JD
-        self.network.set_callback(Protocol.EVENT_DRAW, self.event_draw) # JD
-        self.network.set_callback(Protocol.EVENT_WORD_FOUND, self.event_word_found) # JD
+        self.network.set_callback(Protocol.EVENT_JOIN_GAME, self.event_join_game)
+        self.network.set_callback(Protocol.EVENT_LEAVE_GAME, self.event_leave_game)
+        self.network.set_callback(Protocol.EVENT_START_GAME, self.event_start_game)
+        self.network.set_callback(Protocol.EVENT_END_GAME, self.event_end_game) # JD
+        self.network.set_callback(Protocol.EVENT_DRAW, self.event_draw)
+        self.network.set_callback(Protocol.EVENT_WORD_FOUND, self.event_word_found)
 
     def _get_status_bar_text(self):
         connected = "connecté" if self.network else "déconnecté"
@@ -252,27 +253,31 @@ class PictGame:
 
         self.widget_game_list.add_items([game_name])
 
-    def event_join_game(self, player_name):  # JD
+    def event_join_game(self, player_name):
         # Ajoute le joueur dans la liste
         if player_name != self.player_name:
             logger.info(f"{player_name} a rejoint le jeu !")
 
         self.widget_player_list.add_items([player_name])
 
-    def event_leave_game(self, player_name):  # JD
+    def event_leave_game(self, player_name):
         # Supprime le joueur de la liste
         if player_name != self.player_name:
             logger.info(f"{player_name} a quitté le jeu !")
 
         self.widget_player_list.remove_items([player_name])
 
-    def event_start_game(self):  # JD
+    def event_start_game(self):
         # Le jeu a démarré
         logger.debug("Le jeu a démarré !")
         self._message("Le jeu a démarré")
         self.game_started = True
 
     # JD
+    def event_end_game(self, game_name):
+        logger.debug(f"game {game_name} ended")
+        self.widget_game_list.remove_items([game_name])
+
     def event_draw(self, msg):
         logger.debug(msg)
         if 'action' not in msg: return
@@ -281,7 +286,7 @@ class PictGame:
             case 'plot':
                 self.canvas_window.draw(msg)
             case 'clear':
-                pass
+                self.canvas_window.clear() # JD
             case _:
                 logger.error(f"event_draw called with unknown action: {msg=}")
 
@@ -301,12 +306,11 @@ class PictGame:
                 logger.error(e)
 
             if self.network:
-                self.widget_name_entry.hide() # JD
+                self.widget_name_entry.hide()
                 self.widget_create_button.show()
                 games = self.network.get_list_games()
                 self.widget_game_list.set_item_list(games)
                 self._set_callbacks()
-                #JD: self.canvas_window.can_draw = True
                 self.user_registered = True
 
             self._set_status_bar_text()
@@ -352,7 +356,7 @@ class PictGame:
         self.widget_clear_button.show()
         self.widget_color_button.show()
         self.word2guess = self.network.start_game()
-        self.canvas_window.can_draw = True # JD
+        self.canvas_window.can_draw = True
         self.widget_word_entry.set_text(f"Tu dois faire deviner le mot '{self.word2guess}'")
         logger.debug(f"Tu dois faire deviner le mot '{self.word2guess}'")
 
@@ -377,7 +381,7 @@ class PictGame:
 
     def clear_canvas(self):
         self.canvas_window.clear()
-        # TODO: il faut aussi que les autres joueurs effacent leur Canvas !
+        self.network.send_clear()
 
     def pick_color(self):
         w, h = COLOR_WIDTH, COLOR_HEIGHT
@@ -388,7 +392,6 @@ class PictGame:
 
     def set_color(self, colour):
         self.canvas_window.set_color(colour)
-        # TODO: il faut que dorénavant les écrans des autres joueurs changent de couleur !
 
     def run(self):
         run = True
@@ -418,7 +421,7 @@ class PictGame:
                 if event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION and event.ui_element == self.widget_game_list:
                     self.select_game(event.text)
 
-                # Gestion des appuis sur les boutons # JD
+                # Gestion des appuis sur les boutons
                 if self.user_registered and event.type == pygame_gui.UI_BUTTON_PRESSED:
                     # Création d'une nouvelle partie ?
                     if event.ui_element == self.widget_create_button and not self.game_created:
@@ -468,7 +471,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=log_level)
 
     main = PictGame(WIDTH, HEIGHT)
-    mylogger = log.Logger(log_level, main.widget_msg) # JD
+    mylogger = log.Logger(log_level, main.widget_msg)
     logger = logging.getLogger()
     main.run()
 

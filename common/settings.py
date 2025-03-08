@@ -2,6 +2,8 @@
 HOST = "localhost"
 PORT = 5678
 
+COUNTDOWN = 10
+
 dictionary = [
     "chaise",
     "fauteuil",

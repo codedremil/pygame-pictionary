@@ -1,4 +1,5 @@
 import threading
+import time
 
 
 class Game:
@@ -7,6 +8,7 @@ class Game:
         self.name = player.name
         self.word_to_guess = None
         self.players = []
+        self.countdown_thread = None
         self.lock_players = threading.Lock()
         self.add_player(player)
 
@@ -23,4 +25,4 @@ class Game:
                 self.players.remove(player.name)
 
             player.set_game(None)
-
+            

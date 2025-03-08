@@ -23,11 +23,12 @@ class Client:
         self.callbacks = {}  # user callbacks
         self._callbacks = {
             Protocol.EVENT_ERROR: self.recv_error,
-            Protocol.EVENT_NEW_GAME: self.recv_event_new_game, # JD
+            Protocol.EVENT_NEW_GAME: self.recv_event_new_game,
             Protocol.EVENT_START_GAME: self.recv_event_start_game,
             Protocol.EVENT_JOIN_GAME: self.recv_event_join_game,
             Protocol.EVENT_LEAVE_GAME: self.recv_event_leave_game,
-            Protocol.EVENT_DRAW: self.recv_event_draw, # JD
+            Protocol.EVENT_END_GAME: self.recv_event_end_game, # JD
+            Protocol.EVENT_DRAW: self.recv_event_draw,
             Protocol.EVENT_WORD_FOUND: self.recv_event_word_found,
         }
         self.connect()
@@ -120,13 +121,13 @@ class Client:
     def new_game(self):
         self.cmd_channel.send_new_game()
         msg = self.cmd_channel.get_message()
-        if not msg: return False # JD
+        if not msg: return False 
 
         if msg['rc'] != "OK":
             logging.error(f"Protocol error (new_game): {msg['msg']}")
-            return False # JD
+            return False 
 
-        return True # JD
+        return True
 
     def start_game(self):
         self.cmd_channel.send_start_game(self.game_name)
@@ -155,7 +156,6 @@ class Client:
         if msg['rc'] != "OK":
             logging.error(f"Protocol error (leave_game): {msg['msg']}")
 
-    # JD: hack sur le nom du game
     def get_list_game_players(self, game_name=None):
         if game_name is None:
             game_name = self.game_name
@@ -170,21 +170,18 @@ class Client:
 
         return msg['names']
 
-    # JD:
     def send_plot(self, x, y, color):
         '''color est un tuple (R, G, B)'''
         if type(color) is not tuple:
             color = tuple(color)
         self.cmd_channel.send_draw({"action": "plot", "x": x, "y": y, "color": color})
 
-    # JD:
     def send_clear(self):
         self.cmd_channel.send_draw({"action": "clear"})
 
     def recv_error(self, msg):
         self.callbacks[Protocol.EVENT_ERROR]['func'](msg['msg'])
 
-    # JD
     def recv_event_new_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
             logger.error(f"Protocol error (recv_event_new_game): {msg['msg']}")
@@ -194,6 +191,14 @@ class Client:
 
     def recv_event_start_game(self, msg):
         self.callbacks[Protocol.EVENT_START_GAME]['func']()
+
+    # JD
+    def recv_event_end_game(self, msg):
+        if msg['rc'] != "OK" or 'name' not in msg:
+            logger.error(f"Protocol error (recv_event_end_game): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_END_GAME]['func'](msg['name'])
 
     def recv_event_join_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
@@ -209,7 +214,6 @@ class Client:
 
         self.callbacks[Protocol.EVENT_LEAVE_GAME]['func'](msg['name'])
 
-    # JD
     def recv_event_draw(self, msg):
         if msg['rc'] != "OK":
             logging.error(f"Protocol error (recv_event_draw): {msg['msg']}")
