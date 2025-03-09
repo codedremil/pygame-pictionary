@@ -28,6 +28,7 @@ HEIGHT = 600
 # Dimensions des widgets
 POPUP_WIDTH = 500
 POPUP_HEIGHT = 100
+PSEUDO_LABEL_WIDTH = 130
 SPACING = 3
 LEFT_MENU_WIDTH = 100
 LABEL_HEIGHT = 30
@@ -43,14 +44,15 @@ TOOLBAR_HEIGHT = 300
 COLOR_WIDTH = 400
 COLOR_HEIGHT = 400
 
+PSEUDO_PROMPT = ' Indique ton pseudo: '
+WORD_PROMPT = 'Mot> '
+
+
 logger = None
 display_lock = threading.Lock()
 
 
 class PictGame:
-    PSEUDO_PROMPT = ' Indique ton pseudo: '
-    WORD_PROMPT = 'Mot> '
-
     def __init__(self, width, height):
         pygame.init()
         pygame.font.init()
@@ -87,11 +89,17 @@ class PictGame:
         # Pour la saisie du pseudo
         w, h = POPUP_WIDTH, POPUP_HEIGHT # centré (pas beau !)
         self.widget_name_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect(((self.width - w) // 2, (self.height - h) // 2), (w, h)),
+            relative_rect=pygame.Rect(((self.width - w) // 2 + PSEUDO_LABEL_WIDTH, (self.height - h) // 2), (w - PSEUDO_LABEL_WIDTH, h)),
             manager=self.manager,
-            initial_text=PictGame.PSEUDO_PROMPT
+            #initial_text=PSEUDO_PROMPT
         )
         self.widget_name_entry.change_layer(10)
+        self.widget_name_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(((self.width - w) // 2, (self.height - h) // 2 + 2), (PSEUDO_LABEL_WIDTH, h - 4)),
+            manager=self.manager,
+            text=PSEUDO_PROMPT,
+        )
+        self.widget_name_label.change_layer(10)
 
         # Pour l'affichage de l'état de la connexion avec le serveur
         h = STATUS_BAR_HEIGHT # collé en bas
@@ -174,11 +182,17 @@ class PictGame:
         # Pour proposer un mot
         w, h = CANVAS_WIDTH, LABEL_HEIGHT # collé en bas du Canvas
         self.widget_word_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING, CANVAS_HEIGHT + SPACING - h), (w, h)),
+            relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING + 50, CANVAS_HEIGHT + SPACING - h), (w - 50, h)),
             manager=self.manager,
-            initial_text=PictGame.WORD_PROMPT
+            #initial_text=WORD_PROMPT
         )
         self.widget_word_entry.change_layer(10)
+        self.widget_word_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING, CANVAS_HEIGHT + SPACING - h + 2), (50, h - 4)),
+            manager=self.manager,
+            text=WORD_PROMPT
+        )
+        self.widget_word_label.change_layer(10)
 
         # Pour l'affichage des événements
         self.widget_msg = pygame_gui.elements.UITextBox(
@@ -296,7 +310,8 @@ class PictGame:
             self._message(f"{winner} a trouvé le mot: '{word}'")
 
     def get_pseudo(self):
-        pseudo = self.widget_name_entry.get_text()[len(PictGame.PSEUDO_PROMPT):]
+        #pseudo = self.widget_name_entry.get_text()[len(PSEUDO_PROMPT):]
+        pseudo = self.widget_name_entry.get_text()
         if pseudo.lstrip(): # le pseudo ne peut être vide ou avec que des espaces
             self.player_name = pseudo
             try:
@@ -307,6 +322,7 @@ class PictGame:
 
             if self.network:
                 self.widget_name_entry.hide()
+                self.widget_name_label.hide()
                 self.widget_create_button.show()
                 games = self.network.get_list_games()
                 self.widget_game_list.set_item_list(games)
@@ -316,7 +332,8 @@ class PictGame:
             self._set_status_bar_text()
 
     def guess_word(self):
-        word = self.widget_word_entry.get_text()[len(PictGame.WORD_PROMPT):]
+        #word = self.widget_word_entry.get_text()[len(WORD_PROMPT):]
+        word = self.widget_word_entry.get_text()
         word = word.lstrip() # le mot ne peut être vide ou avec que des espaces
         if word:
             if not self.network.guess_word(word):
