@@ -40,7 +40,9 @@ class Protocol:
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
     EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
     EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
-    EVENT_WORD_NOT_FOUND = "EVENT_WORD_FOUND"   # send = {word} # JD
+    EVENT_WORD_NOT_FOUND = "EVENT_WORD_FOUND"   # send = {word, player} 
+    EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds}
+    EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
 
 
     def __init__(self, conn):
@@ -171,9 +173,18 @@ class Protocol:
     def send_word_found(self, winner, word):
         self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner})
 
+    def send_word_not_found(self, player, word):
+        self.send_message_ok({"cmd": Protocol.EVENT_WORD_NOT_FOUND, "word": word, "player": player})
+
     def send_event_draw(self, dict_msg):
         if 'cmd' in dict_msg:
             del dict_msg['cmd']
 
         self.send_message_ok({"cmd": Protocol.EVENT_DRAW, **dict_msg})
+
+    def send_event_countdown_starting(self, seconds):
+        self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_STARTING, "seconds": seconds})
+
+    def send_event_countdown_ending(self, seconds):
+        self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_ENDING, "seconds": seconds})
 

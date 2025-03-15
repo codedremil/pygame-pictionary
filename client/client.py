@@ -27,9 +27,12 @@ class Client:
             Protocol.EVENT_START_GAME: self.recv_event_start_game,
             Protocol.EVENT_JOIN_GAME: self.recv_event_join_game,
             Protocol.EVENT_LEAVE_GAME: self.recv_event_leave_game,
-            Protocol.EVENT_END_GAME: self.recv_event_end_game, # JD
+            Protocol.EVENT_END_GAME: self.recv_event_end_game,
             Protocol.EVENT_DRAW: self.recv_event_draw,
             Protocol.EVENT_WORD_FOUND: self.recv_event_word_found,
+            Protocol.EVENT_WORD_NOT_FOUND: self.recv_event_word_not_found,
+            Protocol.EVENT_COUNTDOWN_STARTING: self.recv_event_countdown_starting,
+            Protocol.EVENT_COUNTDOWN_ENDING: self.recv_event_countdown_ending,
         }
         self.connect()
 
@@ -193,7 +196,6 @@ class Client:
     def recv_event_start_game(self, msg):
         self.callbacks[Protocol.EVENT_START_GAME]['func']()
 
-    # JD
     def recv_event_end_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
             logger.error(f"Protocol error (recv_event_end_game): {msg['msg']}")
@@ -229,6 +231,13 @@ class Client:
 
         self.callbacks[Protocol.EVENT_WORD_FOUND]['func'](msg['winner'], msg['word'])
 
+    def recv_event_word_not_found(self, msg):
+        if msg['rc'] != "OK" or "player" not in msg or "word" not in msg:
+            logging.error(f"Protocol error (recv_event_word_not_found): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_WORD_NOT_FOUND]['func'](msg['player'], msg['word'])
+
     def guess_word(self, word):
         self.cmd_channel.send_guess_word(word)
         msg = self.cmd_channel.get_message()
@@ -239,4 +248,18 @@ class Client:
             return False
 
         return msg['found']
+
+    def recv_event_countdown_starting(self, msg):
+        if msg['rc'] != 'OK' or 'seconds' not in msg:
+            logging.error(f"Protocol error (recv_event_countdown_starting): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_COUNTDOWN_STARTING]['func'](msg['seconds'])
+
+    def recv_event_countdown_ending(self, msg):
+        if msg['rc'] != 'OK' or 'seconds' not in msg:
+            logging.error(f"Protocol error (recv_event_countdown_ending): {msg['msg']}")
+            return
+
+        self.callbacks[Protocol.EVENT_COUNTDOWN_ENDING]['func'](msg['seconds'])
 

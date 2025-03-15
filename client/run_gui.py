@@ -37,8 +37,11 @@ PLAYER_LIST_HEIGHT = 140
 STATUS_BAR_HEIGHT = 20
 MSGBOX_WIDTH = WIDTH
 MSGBOX_HEIGHT = 100
-CANVAS_WIDTH = WIDTH - LEFT_MENU_WIDTH - 2 * SPACING
+RIGHT_TOOL_WIDTH = 100
+CANVAS_WIDTH = WIDTH - LEFT_MENU_WIDTH - 2 * SPACING - RIGHT_TOOL_WIDTH
 CANVAS_HEIGHT = HEIGHT - STATUS_BAR_HEIGHT - MSGBOX_HEIGHT - 2 * SPACING
+PROPOSED_WORDS_WIDTH = RIGHT_TOOL_WIDTH
+PROPOSED_WORDS_HEIGHT = CANVAS_HEIGHT
 BUTTON_HEIGHT = 20
 TOOLBAR_HEIGHT = 300
 COLOR_WIDTH = 400
@@ -144,6 +147,14 @@ class PictGame:
             item_list=[],
         )
 
+        # Pour l'affichage des mots proposés
+        w, h = PROPOSED_WORDS_WIDTH, PROPOSED_WORDS_HEIGHT # collé en haut à droite
+        self.widget_proposed_words = pygame_gui.elements.UISelectionList(
+            relative_rect=pygame.Rect((self.width - PROPOSED_WORDS_WIDTH, SPACING), (w, h)),
+            manager=self.manager,
+            item_list=[],
+        )
+
         # Pour créer et démarrer un jeu
         w, h = LEFT_MENU_WIDTH, BUTTON_HEIGHT
         self.widget_create_button = pygame_gui.elements.UIButton(
@@ -187,12 +198,14 @@ class PictGame:
             #initial_text=WORD_PROMPT
         )
         self.widget_word_entry.change_layer(10)
+        self.widget_word_entry.hide()
         self.widget_word_label = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING, CANVAS_HEIGHT + SPACING - h + 2), (50, h - 4)),
             manager=self.manager,
             text=WORD_PROMPT
         )
         self.widget_word_label.change_layer(10)
+        self.widget_word_label.hide()
 
         # Pour l'affichage des événements
         self.widget_msg = pygame_gui.elements.UITextBox(
@@ -241,6 +254,9 @@ class PictGame:
         self.network.set_callback(Protocol.EVENT_END_GAME, self.event_end_game) # JD
         self.network.set_callback(Protocol.EVENT_DRAW, self.event_draw)
         self.network.set_callback(Protocol.EVENT_WORD_FOUND, self.event_word_found)
+        self.network.set_callback(Protocol.EVENT_WORD_NOT_FOUND, self.event_word_not_found)
+        self.network.set_callback(Protocol.EVENT_COUNTDOWN_STARTING, self.event_countdown_starting)
+        self.network.set_callback(Protocol.EVENT_COUNTDOWN_ENDING, self.event_countdown_ending)
 
     def _get_status_bar_text(self):
         connected = "connecté" if self.network else "déconnecté"
@@ -286,8 +302,13 @@ class PictGame:
         logger.debug("Le jeu a démarré !")
         self._message("Le jeu a démarré")
         self.game_started = True
+        self.widget_word_label.show()
+        self.widget_word_entry.show()
 
-    # JD
+        # seul le créateur peut dessiner
+        if self.game == self.player_name:
+            self.canvas_window.can_draw = True
+
     def event_end_game(self, game_name):
         logger.debug(f"game {game_name} ended")
         self.widget_game_list.remove_items([game_name])
@@ -308,6 +329,16 @@ class PictGame:
         if self.player_name != winner:
             logger.debug(f"{winner} a trouvé le mot: '{word}'")
             self._message(f"{winner} a trouvé le mot: '{word}'")
+
+    def event_word_not_found(self, player, word):
+        logger.debug(f"{player} a proposé le mot: '{word}'")
+        self.widget_proposed_words.add_items([word])
+
+    def event_countdown_starting(self, seconds):
+        logger.info(f"starting in {seconds} seconds")
+
+    def event_countdown_ending(self, seconds):
+        logger.info(f"ending in {seconds} seconds")
 
     def get_pseudo(self):
         #pseudo = self.widget_name_entry.get_text()[len(PSEUDO_PROMPT):]
@@ -373,8 +404,9 @@ class PictGame:
         self.widget_clear_button.show()
         self.widget_color_button.show()
         self.word2guess = self.network.start_game()
-        self.canvas_window.can_draw = True
         self.widget_word_entry.set_text(f"Tu dois faire deviner le mot '{self.word2guess}'")
+        self.widget_word_label.show()
+        self.widget_word_entry.show()
         logger.debug(f"Tu dois faire deviner le mot '{self.word2guess}'")
 
     def join_game(self):

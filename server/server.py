@@ -277,7 +277,7 @@ class Server:
         player.game.word_to_guess = choice(dictionary)
         proto.send_resp_start_game(player.game.word_to_guess)
 
-        # JD: démarre un thread pour le compte à rebours
+        # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
         player.game.countdown_thread.start()
 
@@ -296,10 +296,13 @@ class Server:
         found = player.game.word_to_guess == msg['word']
         proto.send_resp_guess_word(found)
 
+        # Indique l'événement à tous les joueurs
         if found:
-            # Indique l'événement à tous les joueurs
             for player_name in player.game.players:
                 self.players[player_name].event_channel.send_word_found(player.name, player.game.word_to_guess)
+        else:
+            for player_name in player.game.players:
+                self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
 
     def recv_draw(self, player, proto, msg):
         logging.debug(f"recv_draw {msg=}")
@@ -309,11 +312,13 @@ class Server:
             if player.name != player_name:
                 self.players[player_name].event_channel.send_event_draw(msg)
 
-    # JD
     def countdown(self, game, seconds):
         while seconds:
+            for player_name in game.players:
+                self.players[player_name].event_channel.send_event_countdown_starting(seconds)
+
             time.sleep(1)
-            print("tick")
+            logging.debug(f"tick {seconds=}")
             seconds -= 1
 
         for player_name in game.players:

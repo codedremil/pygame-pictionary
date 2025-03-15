@@ -1,4 +1,9 @@
 {
+    "defaults": {
+	    "colours": {
+		    "normal_text": "#FFFFFF"
+	    }
+    },
     "button": {
         "colours": {
             "normal_border": "White",
