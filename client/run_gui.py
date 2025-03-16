@@ -98,7 +98,7 @@ class PictGame:
         )
         self.widget_name_entry.change_layer(10)
         self.widget_name_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(((self.width - w) // 2, (self.height - h) // 2 + 2), (PSEUDO_LABEL_WIDTH, h - 4)),
+            relative_rect=pygame.Rect(((self.width - w) // 2, (self.height - h) // 2 + 2), (PSEUDO_LABEL_WIDTH + 3, h - 4)),
             manager=self.manager,
             text=PSEUDO_PROMPT,
         )
@@ -200,7 +200,7 @@ class PictGame:
         self.widget_word_entry.change_layer(10)
         self.widget_word_entry.hide()
         self.widget_word_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING, CANVAS_HEIGHT + SPACING - h + 2), (50, h - 4)),
+            relative_rect=pygame.Rect((LEFT_MENU_WIDTH + SPACING, CANVAS_HEIGHT + SPACING - h + 2), (50 + 3, h - 4)),
             manager=self.manager,
             text=WORD_PROMPT
         )
@@ -326,6 +326,7 @@ class PictGame:
                 logger.error(f"event_draw called with unknown action: {msg=}")
 
     def event_word_found(self, winner, word):
+        self.canvas_window.can_draw = False
         if self.player_name != winner:
             logger.debug(f"{winner} a trouvé le mot: '{word}'")
             self._message(f"{winner} a trouvé le mot: '{word}'")

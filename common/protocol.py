@@ -40,7 +40,7 @@ class Protocol:
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
     EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
     EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
-    EVENT_WORD_NOT_FOUND = "EVENT_WORD_FOUND"   # send = {word, player} 
+    EVENT_WORD_NOT_FOUND = "EVENT_NOT_WORD_FOUND"   # send = {word, player} 
     EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds}
     EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
 

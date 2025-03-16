@@ -241,6 +241,10 @@ class Server:
                 self.players[player_name].event_channel.send_event_join_game(player.name)
 
             # TODO: si le jeu a démarré et le dessin commencé, il faut envoyer le dessin courant !
+            if game.started:
+                # le joueur qui vient de se connecter doit savoir que le jeu a démarré
+                player.event_channel.send_event_start_game()
+
 
     def recv_leave_game(self, player, proto, msg):
         logging.debug("recv_leave_game called")
@@ -293,6 +297,7 @@ class Server:
             return
 
         logging.debug(f"{player.game.word_to_guess=}, {msg['word']=}")
+        # TODO: ignore les accents
         found = player.game.word_to_guess == msg['word']
         proto.send_resp_guess_word(found)
 
@@ -323,6 +328,8 @@ class Server:
 
         for player_name in game.players:
             self.players[player_name].event_channel.send_event_start_game()
+
+        game.started = True
 
 
 # Liste des commandes

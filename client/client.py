@@ -105,7 +105,7 @@ class Client:
         if not msg: return []
 
         if msg['rc'] != "OK" or 'names' not in msg:
-            logging.error("Protocol error (get_list_players): {msg['msg']}")
+            logging.error("Protocol error (get_list_players): {msg}")
             return []
 
         return msg['names']
@@ -116,7 +116,7 @@ class Client:
         if not msg: return []
 
         if msg['rc'] != "OK" or 'names' not in msg:
-            logging.error(f"Protocol error (get_list_games): {msg['msg']}")
+            logging.error(f"Protocol error (get_list_games): {msg}")
             return []
 
         return msg['names']
@@ -127,7 +127,7 @@ class Client:
         if not msg: return False 
 
         if msg['rc'] != "OK":
-            logging.error(f"Protocol error (new_game): {msg['msg']}")
+            logging.error(f"Protocol error (new_game): {msg}")
             return False 
 
         return True
@@ -138,7 +138,7 @@ class Client:
         if not msg: return None
 
         if msg['rc'] != "OK" or 'word' not in msg:
-            logging.error(f"Protocol error (start_game): {msg['msg']}")
+            logging.error(f"Protocol error (start_game): {msg}")
             return None
 
         return msg['word']
@@ -149,7 +149,7 @@ class Client:
         if not msg: return None
 
         if msg['rc'] != "OK":
-            logging.error(f"Protocol error (join_game): {msg['msg']}")
+            logging.error(f"Protocol error (join_game): {msg}")
 
     def leave_game(self, game_name):
         self.cmd_channel.send_leave_game(game_name)
@@ -157,7 +157,7 @@ class Client:
         if not msg: return None
 
         if msg['rc'] != "OK":
-            logging.error(f"Protocol error (leave_game): {msg['msg']}")
+            logging.error(f"Protocol error (leave_game): {msg}")
 
     def get_list_game_players(self, game_name=None):
         if game_name is None:
@@ -168,7 +168,7 @@ class Client:
         if not msg: return []
 
         if msg['rc'] != "OK" or 'names' not in msg:
-            logging.error("Protocol error (get_list_game_players): {msg['msg']}")
+            logging.error("Protocol error (get_list_game_players): {msg}")
             return []
 
         return msg['names']
@@ -188,7 +188,7 @@ class Client:
 
     def recv_event_new_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logger.error(f"Protocol error (recv_event_new_game): {msg['msg']}")
+            logger.error(f"Protocol error (recv_event_new_game): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_NEW_GAME]['func'](msg['name'])
@@ -198,42 +198,42 @@ class Client:
 
     def recv_event_end_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logger.error(f"Protocol error (recv_event_end_game): {msg['msg']}")
+            logger.error(f"Protocol error (recv_event_end_game): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_END_GAME]['func'](msg['name'])
 
     def recv_event_join_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logging.error(f"Protocol error (recv_event_join_game): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_join_game): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_JOIN_GAME]['func'](msg['name'])
 
     def recv_event_leave_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
-            logging.error(f"Protocol error (recv_event_leave_game): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_leave_game): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_LEAVE_GAME]['func'](msg['name'])
 
     def recv_event_draw(self, msg):
         if msg['rc'] != "OK":
-            logging.error(f"Protocol error (recv_event_draw): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_draw): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_DRAW]['func'](msg)
 
     def recv_event_word_found(self, msg):
         if msg['rc'] != "OK" or "winner" not in msg or "word" not in msg:
-            logging.error(f"Protocol error (recv_event_word_found): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_word_found): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_WORD_FOUND]['func'](msg['winner'], msg['word'])
 
     def recv_event_word_not_found(self, msg):
         if msg['rc'] != "OK" or "player" not in msg or "word" not in msg:
-            logging.error(f"Protocol error (recv_event_word_not_found): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_word_not_found): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_WORD_NOT_FOUND]['func'](msg['player'], msg['word'])
@@ -244,21 +244,21 @@ class Client:
         if not msg: return False
 
         if msg['rc'] != "OK" or 'found' not in msg:
-            logging.error("Protocol error (guess_word): {msg['msg']}")
+            logging.error("Protocol error (guess_word): {msg}")
             return False
 
         return msg['found']
 
     def recv_event_countdown_starting(self, msg):
         if msg['rc'] != 'OK' or 'seconds' not in msg:
-            logging.error(f"Protocol error (recv_event_countdown_starting): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_countdown_starting): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_COUNTDOWN_STARTING]['func'](msg['seconds'])
 
     def recv_event_countdown_ending(self, msg):
         if msg['rc'] != 'OK' or 'seconds' not in msg:
-            logging.error(f"Protocol error (recv_event_countdown_ending): {msg['msg']}")
+            logging.error(f"Protocol error (recv_event_countdown_ending): {msg}")
             return
 
         self.callbacks[Protocol.EVENT_COUNTDOWN_ENDING]['func'](msg['seconds'])

@@ -6,6 +6,7 @@ class Game:
     def __init__(self, player):
         '''le nom du jeu est le nom du joueur'''
         self.name = player.name
+        self.started = False
         self.word_to_guess = None
         self.players = []
         self.countdown_thread = None
