@@ -12,6 +12,7 @@ import threading
 import socket
 import logging
 import traceback
+from unidecode import unidecode
 from player import Player
 from game import Game
 from protocol import Protocol
@@ -280,6 +281,7 @@ class Server:
 
         player.game.word_to_guess = get_word()
         proto.send_resp_start_game(player.game.word_to_guess)
+        player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
         # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
@@ -297,8 +299,7 @@ class Server:
             return
 
         logging.debug(f"{player.game.word_to_guess=}, {msg['word']=}")
-        # TODO: ignore les accents
-        found = player.game.word_to_guess == msg['word']
+        found = player.game.word_to_guess == unidecode(msg['word'])
         proto.send_resp_guess_word(found)
 
         # Indique l'événement à tous les joueurs
