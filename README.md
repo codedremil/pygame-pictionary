@@ -15,3 +15,4 @@ Le client est constitué d'une interface graphique lancée ainsi :
 $ cd client
 $ python run_pict.py
 ```
+
