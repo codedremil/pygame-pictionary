@@ -12,11 +12,11 @@ import threading
 import socket
 import logging
 import traceback
-from random import choice
 from player import Player
 from game import Game
 from protocol import Protocol
-from settings import HOST, PORT, dictionary, COUNTDOWN
+from word_api import get_word
+from settings import HOST, PORT, COUNTDOWN
 
 
 class Server:
@@ -278,7 +278,7 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        player.game.word_to_guess = choice(dictionary)
+        player.game.word_to_guess = get_word()
         proto.send_resp_start_game(player.game.word_to_guess)
 
         # démarre un thread pour le compte à rebours
