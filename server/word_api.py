@@ -19,7 +19,7 @@ dictionary = [
 ]
 
 # dictionnaire 2 avec des catégories
-dico_v2 = pictionary_words = {
+dico_v2 = {
     "Animaux": ["Chien", "Chat", "Éléphant", "Lion", "Giraf", "Kangourou", "Pingouin", "Ours", "Renard", "Tortue"],
     "Lieux": ["Plage", "Montagne", "Forêt", "Désert", "Ville", "Parc", "Lac", "Île", "Château", "École"],
     "Objets": ["Voiture", "Téléphone", "Ordinateur", "Livre", "Chaise", "Table", "Lampe", "Montre", "Vélo", "Guitare"],
