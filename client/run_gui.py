@@ -409,6 +409,7 @@ class PictGame:
         self.widget_word_label.show()
         self.widget_word_entry.show()
         logger.debug(f"Tu dois faire deviner le mot '{self.word2guess}'")
+        self._set_status_bar_text()
 
     def join_game(self):
         self.widget_create_button.hide()
@@ -417,6 +418,7 @@ class PictGame:
         self.game = self.selected_game
         self._set_status_bar_text()
         self.network.join_game(self.selected_game)
+        self._set_status_bar_text()
 
     def leave_game(self):
         self.widget_create_button.show()
@@ -428,6 +430,7 @@ class PictGame:
         self.game = None
         self.game_started = False
         self.event_leave_game(self.player_name)
+        self._set_status_bar_text()
 
     def clear_canvas(self):
         self.canvas_window.clear()
