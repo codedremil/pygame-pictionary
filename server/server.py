@@ -17,7 +17,7 @@ from player import Player
 from game import Game
 from protocol import Protocol
 from word_api import get_word
-from settings import HOST, PORT, COUNTDOWN
+from settings import HOST, PORT, COUNTDOWN, GUESS_TIME
 
 
 class Server:
@@ -341,6 +341,18 @@ class Server:
             self.players[player_name].event_channel.send_event_start_game(game.master_player)
 
         game.started = True
+
+        # démarre un compte à rebours de la partie
+        seconds = GUESS_TIME
+        while seconds:
+            for player_name in game.players:
+                self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+
+            time.sleep(1)
+            seconds -= 1
+
+        # TODO: Fin de partie par expiration du temps (vérifier fin de partie par guess OK)
+        game.started = False # ?
 
 
 # Liste des commandes

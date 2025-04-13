@@ -33,6 +33,7 @@ class Client:
             Protocol.EVENT_WORD_NOT_FOUND: self.recv_event_word_not_found,
             Protocol.EVENT_COUNTDOWN_STARTING: self.recv_event_countdown_starting,
             Protocol.EVENT_COUNTDOWN_ENDING: self.recv_event_countdown_ending,
+            Protocol.EVENT_COUNTDOWN_PLAYING: self.recv_event_countdown_playing,
         }
         self.connect()
 
@@ -267,3 +268,9 @@ class Client:
 
         self.callbacks[Protocol.EVENT_COUNTDOWN_ENDING]['func'](msg['seconds'])
 
+    def recv_event_countdown_playing(self, msg):
+        if msg['rc'] != 'OK' or 'seconds' not in msg:
+            logging.error(f"Protocol error (recv_event_countdown_playing): {msg}")
+            return
+
+        self.callbacks[Protocol.EVENT_COUNTDOWN_PLAYING]['func'](msg['seconds'])

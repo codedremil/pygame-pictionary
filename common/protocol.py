@@ -43,6 +43,7 @@ class Protocol:
     EVENT_WORD_NOT_FOUND = "EVENT_NOT_WORD_FOUND"   # send = {word, player} 
     EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds, master_player}
     EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
+    EVENT_COUNTDOWN_PLAYING = "EVENT_COUNTDOWN_PLAYING"     # send {seconds}
 
 
     def __init__(self, conn):
@@ -184,6 +185,9 @@ class Protocol:
 
     def send_event_countdown_starting(self, seconds, master_player):
         self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_STARTING, "seconds": seconds, "master_player": master_player})
+
+    def send_event_countdown_playing(self, seconds):
+        self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_PLAYING, "seconds": seconds})
 
     # inutilisé ?
     def send_event_countdown_ending(self, seconds):

@@ -40,8 +40,10 @@ MSGBOX_HEIGHT = 100
 RIGHT_TOOL_WIDTH = 100
 CANVAS_WIDTH = WIDTH - LEFT_MENU_WIDTH - 2 * SPACING - RIGHT_TOOL_WIDTH
 CANVAS_HEIGHT = HEIGHT - STATUS_BAR_HEIGHT - MSGBOX_HEIGHT - 2 * SPACING
+TIME_WIDTH = RIGHT_TOOL_WIDTH
+TIME_HEIGHT = 30
 PROPOSED_WORDS_WIDTH = RIGHT_TOOL_WIDTH
-PROPOSED_WORDS_HEIGHT = CANVAS_HEIGHT
+PROPOSED_WORDS_HEIGHT = CANVAS_HEIGHT - TIME_HEIGHT
 BUTTON_HEIGHT = 20
 TOOLBAR_HEIGHT = 300
 COLOR_WIDTH = 400
@@ -147,10 +149,18 @@ class PictGame:
             item_list=[],
         )
 
+        # Pour l'affichage du temps restant
+        w, h = TIME_WIDTH, TIME_HEIGHT # collé en haut à droite
+        self.widget_remaining_time = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((self.width - TIME_WIDTH, SPACING), (w, h)),
+            manager=self.manager,
+            text=f'Temps : 00',
+        )
+
         # Pour l'affichage des mots proposés
         w, h = PROPOSED_WORDS_WIDTH, PROPOSED_WORDS_HEIGHT # collé en haut à droite
         self.widget_proposed_words = pygame_gui.elements.UISelectionList(
-            relative_rect=pygame.Rect((self.width - PROPOSED_WORDS_WIDTH, SPACING), (w, h)),
+            relative_rect=pygame.Rect((self.width - PROPOSED_WORDS_WIDTH, SPACING + TIME_HEIGHT), (w, h)),
             manager=self.manager,
             item_list=[],
         )
@@ -257,6 +267,7 @@ class PictGame:
         self.network.set_callback(Protocol.EVENT_WORD_NOT_FOUND, self.event_word_not_found)
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_STARTING, self.event_countdown_starting)
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_ENDING, self.event_countdown_ending)
+        self.network.set_callback(Protocol.EVENT_COUNTDOWN_PLAYING, self.event_countdown_playing)
 
     def _get_status_bar_text(self):
         connected = "connecté" if self.network else "déconnecté"
@@ -344,6 +355,10 @@ class PictGame:
 
     def event_countdown_ending(self, seconds):
         logger.info(f"ending in {seconds} seconds")
+
+    def event_countdown_playing(self, seconds):
+        #logger.info(f"ending in {seconds} seconds")
+        self.widget_remaining_time.set_text(f"Temps : {seconds:02}")
 
     def get_pseudo(self):
         #pseudo = self.widget_name_entry.get_text()[len(PSEUDO_PROMPT):]
