@@ -36,12 +36,12 @@ class Protocol:
     EVENT_NEW_GAME = "EVENT_NEW_GAME"     # send = {name}   # = game_name
     EVENT_JOIN_GAME = "EVENT_JOIN_GAME"     # send = {name}   # = player_name
     EVENT_LEAVE_GAME = "EVENT_LEAVE_GAME"   # send = {name}   # = player_name
-    EVENT_START_GAME = "EVENT_START_GAME"   # send = {}
+    EVENT_START_GAME = "EVENT_START_GAME"   # send = {master_player}
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
     EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
     EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
     EVENT_WORD_NOT_FOUND = "EVENT_NOT_WORD_FOUND"   # send = {word, player} 
-    EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds}
+    EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds, master_player}
     EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
 
 
@@ -161,8 +161,8 @@ class Protocol:
     def send_event_leave_game(self, player_name):
         self.send_message_ok({"cmd": Protocol.EVENT_LEAVE_GAME, "name": player_name})
 
-    def send_event_start_game(self):
-        self.send_message_ok({"cmd": Protocol.EVENT_START_GAME})
+    def send_event_start_game(self, master_player):
+        self.send_message_ok({"cmd": Protocol.EVENT_START_GAME, "master_player": master_player})
 
     def send_event_end_game(self, game_name):
         self.send_message_ok({"cmd": Protocol.EVENT_END_GAME, "name": game_name})
@@ -182,9 +182,10 @@ class Protocol:
 
         self.send_message_ok({"cmd": Protocol.EVENT_DRAW, **dict_msg})
 
-    def send_event_countdown_starting(self, seconds):
-        self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_STARTING, "seconds": seconds})
+    def send_event_countdown_starting(self, seconds, master_player):
+        self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_STARTING, "seconds": seconds, "master_player": master_player})
 
+    # inutilisé ?
     def send_event_countdown_ending(self, seconds):
         self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_ENDING, "seconds": seconds})
 

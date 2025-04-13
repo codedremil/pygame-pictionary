@@ -297,10 +297,14 @@ class PictGame:
 
         self.widget_player_list.remove_items([player_name])
 
-    def event_start_game(self):
+    def event_start_game(self, master_player):
         # Le jeu a démarré
-        logger.debug("Le jeu a démarré !")
-        self._message("Le jeu a démarré")
+        if master_player == self.player_name:
+            logger.debug("Le jeu a démarré !")
+            self._message("Le jeu a démarré")
+        else:
+            self._message(f"Le jeu a démarré !\nC'est au tour de {master_player} de dessiner !")
+
         self.game_started = True
         self.widget_word_label.show()
         self.widget_word_entry.show()

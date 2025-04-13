@@ -194,7 +194,11 @@ class Client:
         self.callbacks[Protocol.EVENT_NEW_GAME]['func'](msg['name'])
 
     def recv_event_start_game(self, msg):
-        self.callbacks[Protocol.EVENT_START_GAME]['func']()
+        if msg['rc'] != "OK" or 'master_player' not in msg:
+            logger.error(f"Protocol error (recv_event_start_game): {msg}")
+            return
+
+        self.callbacks[Protocol.EVENT_START_GAME]['func'](msg['master_player'])
 
     def recv_event_end_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:

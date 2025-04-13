@@ -283,6 +283,16 @@ class Server:
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
+        # Choix du joueur qui doit faire deviner le mot
+        if player.game.master_player is None:
+            player.game.master_player = player.game.name
+        else:
+            try:
+                idx = player.game.players.index(player.game.master_player)
+            except:
+                idx = 0
+            player.game.master_player = player.game.player[(idx + 1) % len(player.game.players)]
+
         # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
         player.game.countdown_thread.start()
@@ -321,14 +331,14 @@ class Server:
     def countdown(self, game, seconds):
         while seconds:
             for player_name in game.players:
-                self.players[player_name].event_channel.send_event_countdown_starting(seconds)
+                self.players[player_name].event_channel.send_event_countdown_starting(seconds, game.master_player)
 
             time.sleep(1)
             logging.debug(f"tick {seconds=}")
             seconds -= 1
 
         for player_name in game.players:
-            self.players[player_name].event_channel.send_event_start_game()
+            self.players[player_name].event_channel.send_event_start_game(game.master_player)
 
         game.started = True
 
