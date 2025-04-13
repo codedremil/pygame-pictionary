@@ -284,14 +284,14 @@ class Server:
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
         # Choix du joueur qui doit faire deviner le mot
-        if player.game.master_player is None:
-            player.game.master_player = player.game.name
-        else:
-            try:
-                idx = player.game.players.index(player.game.master_player)
-            except:
-                idx = 0
-            player.game.master_player = player.game.player[(idx + 1) % len(player.game.players)]
+        # if player.game.master_player is None:
+        #     player.game.master_player = player.game.name
+        # else:
+        #     try:
+        #         idx = player.game.players.index(player.game.master_player)
+        #     except:
+        #         idx = 0
+        #     player.game.master_player = player.game.players[(idx + 1) % len(player.game.players)]
 
         # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
@@ -313,47 +313,69 @@ class Server:
         proto.send_resp_guess_word(found)
 
         # Indique l'événement à tous les joueurs
-        if found:
-            for player_name in player.game.players:
-                self.players[player_name].event_channel.send_word_found(player.name, player.game.word_to_guess)
-        else:
-            for player_name in player.game.players:
-                self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
+        with player.game.lock_players:
+            if found:
+                # Calcule le nom du prochain dessinateur
+                self._get_new_master(player.game)
+                player.game.started = False
+                for player_name in player.game.players:
+                    self.players[player_name].event_channel.send_word_found(player.name,
+                                                                            player.game.word_to_guess,
+                                                                            player.game.master_player)
+            else:
+                for player_name in player.game.players:
+                    self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
 
     def recv_draw(self, player, proto, msg):
         logging.debug(f"recv_draw {msg=}")
 
         # Indique l'événement à tous les autres joueurs
-        for player_name in player.game.players:
-            if player.name != player_name:
-                self.players[player_name].event_channel.send_event_draw(msg)
+        with player.game.lock_players:
+            for player_name in player.game.players:
+                if player.name != player_name:
+                    self.players[player_name].event_channel.send_event_draw(msg)
 
     def countdown(self, game, seconds):
         while seconds:
-            for player_name in game.players:
-                self.players[player_name].event_channel.send_event_countdown_starting(seconds, game.master_player)
+            with game.lock_players:
+                for player_name in game.players:
+                    self.players[player_name].event_channel.send_event_countdown_starting(seconds, game.master_player)
 
             time.sleep(1)
             logging.debug(f"tick {seconds=}")
             seconds -= 1
 
-        for player_name in game.players:
-            self.players[player_name].event_channel.send_event_start_game(game.master_player)
+        with game.lock_players:
+            for player_name in game.players:
+                self.players[player_name].event_channel.send_event_start_game(game.master_player)
 
         game.started = True
 
-        # démarre un compte à rebours de la partie
+        # démarre un compte à rebours de la partie (on sort si qq'un a trouvé !)
         seconds = GUESS_TIME
-        while seconds:
-            for player_name in game.players:
-                self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+        while seconds and game.started:
+            with game.lock_players:
+                for player_name in game.players:
+                    self.players[player_name].event_channel.send_event_countdown_playing(seconds)
 
             time.sleep(1)
             seconds -= 1
 
-        # TODO: Fin de partie par expiration du temps (vérifier fin de partie par guess OK)
-        game.started = False # ?
+        # Si game.started est faux, c'est que qq'un a trouvé sinon on avertit la fin du jeu!
+        self._get_new_master(game)
+        if game.started:
+            game.started = False
+            with game.lock_players:
+                for player_name in game.players:
+                    self.players[player_name].event_channel.send_event_round_end(game.word_to_guess, game.master_player)
 
+    def _get_new_master(self, game):
+            # Calcule le nom du prochain dessinateur
+            try:
+                idx = game.players.index(game.master_player)
+            except:
+                idx = 0
+            game.master_player = game.players[(idx + 1) % len(game.players)]
 
 # Liste des commandes
 proto_commands = {

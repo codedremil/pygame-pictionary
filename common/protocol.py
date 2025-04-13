@@ -39,11 +39,12 @@ class Protocol:
     EVENT_START_GAME = "EVENT_START_GAME"   # send = {master_player}
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
     EVENT_DRAW = "EVENT_DRAW"               # send = {action=plot + (x, y, color) | action=clear}
-    EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word}
+    EVENT_WORD_FOUND = "EVENT_WORD_FOUND"   # send = {winner, word, new_master}
     EVENT_WORD_NOT_FOUND = "EVENT_NOT_WORD_FOUND"   # send = {word, player} 
     EVENT_COUNTDOWN_STARTING = "EVENT_COUNTDOWN_STARTING"     # send {seconds, master_player}
     EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
     EVENT_COUNTDOWN_PLAYING = "EVENT_COUNTDOWN_PLAYING"     # send {seconds}
+    EVENT_ROUND_END = "EVENT_ROUND_END" # send = {word, master_player}
 
 
     def __init__(self, conn):
@@ -171,8 +172,8 @@ class Protocol:
     def send_event_guess_word(self, word):
         self.send_message_ok({"cmd": Protocol.EVENT_GUESS_WORD, "word": word})
 
-    def send_word_found(self, winner, word):
-        self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner})
+    def send_word_found(self, winner, word, new_master):
+        self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner, "master": new_master})
 
     def send_word_not_found(self, player, word):
         self.send_message_ok({"cmd": Protocol.EVENT_WORD_NOT_FOUND, "word": word, "player": player})
@@ -193,3 +194,5 @@ class Protocol:
     def send_event_countdown_ending(self, seconds):
         self.send_message_ok({"cmd": Protocol.EVENT_COUNTDOWN_ENDING, "seconds": seconds})
 
+    def send_event_round_end(self, word, new_master):
+        self.send_message_ok({"cmd": Protocol.EVENT_ROUND_END, "word": word, "master": new_master})

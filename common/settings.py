@@ -6,5 +6,5 @@ PORT = 5678
 COUNTDOWN = 10
 
 # Durée d'une partie
-GUESS_TIME = 90
+GUESS_TIME = 60
 

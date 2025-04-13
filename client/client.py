@@ -34,6 +34,7 @@ class Client:
             Protocol.EVENT_COUNTDOWN_STARTING: self.recv_event_countdown_starting,
             Protocol.EVENT_COUNTDOWN_ENDING: self.recv_event_countdown_ending,
             Protocol.EVENT_COUNTDOWN_PLAYING: self.recv_event_countdown_playing,
+            Protocol.EVENT_ROUND_END: self.recv_event_round_end,
         }
         self.connect()
 
@@ -230,11 +231,11 @@ class Client:
         self.callbacks[Protocol.EVENT_DRAW]['func'](msg)
 
     def recv_event_word_found(self, msg):
-        if msg['rc'] != "OK" or "winner" not in msg or "word" not in msg:
+        if msg['rc'] != "OK" or "winner" not in msg or "word" not in msg or "master" not in msg:
             logging.error(f"Protocol error (recv_event_word_found): {msg}")
             return
 
-        self.callbacks[Protocol.EVENT_WORD_FOUND]['func'](msg['winner'], msg['word'])
+        self.callbacks[Protocol.EVENT_WORD_FOUND]['func'](msg['winner'], msg['word'], msg['master'])
 
     def recv_event_word_not_found(self, msg):
         if msg['rc'] != "OK" or "player" not in msg or "word" not in msg:
@@ -274,3 +275,10 @@ class Client:
             return
 
         self.callbacks[Protocol.EVENT_COUNTDOWN_PLAYING]['func'](msg['seconds'])
+
+    def recv_event_round_end(self, msg):
+        if msg['rc'] != 'OK' or 'word' not in msg or 'master' not in msg:
+            logging.error(f"Protocol error (recv_event_round_end): {msg}")
+            return
+
+        self.callbacks[Protocol.EVENT_ROUND_END]['func'](msg['word'], msg['master'])

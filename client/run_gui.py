@@ -27,7 +27,7 @@ HEIGHT = 600
 
 # Dimensions des widgets
 POPUP_WIDTH = 500
-POPUP_HEIGHT = 100
+POPUP_HEIGHT = 180
 PSEUDO_LABEL_WIDTH = 140
 SPACING = 3
 LEFT_MENU_WIDTH = 100
@@ -268,6 +268,7 @@ class PictGame:
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_STARTING, self.event_countdown_starting)
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_ENDING, self.event_countdown_ending)
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_PLAYING, self.event_countdown_playing)
+        self.network.set_callback(Protocol.EVENT_ROUND_END, self.event_round_end)
 
     def _get_status_bar_text(self):
         connected = "connecté" if self.network else "déconnecté"
@@ -321,7 +322,7 @@ class PictGame:
         self.widget_word_entry.show()
 
         # seul le créateur peut dessiner
-        if self.game == self.player_name:
+        if master_player == self.player_name:
             self.canvas_window.can_draw = True
 
     def event_end_game(self, game_name):
@@ -340,18 +341,24 @@ class PictGame:
             case _:
                 logger.error(f"event_draw called with unknown action: {msg=}")
 
-    def event_word_found(self, winner, word):
-        self.canvas_window.can_draw = False
+    def event_word_found(self, winner, word, new_master):
+        self._end_of_round()
         if self.player_name != winner:
             logger.debug(f"{winner} a trouvé le mot: '{word}'")
-            self._message(f"{winner} a trouvé le mot: '{word}'")
+            self._message(f"{winner} a trouvé le mot: '{word}'\n"
+                          f"C'est au tour de {new_master} de dessiner !")
+
+        if new_master == self.player_name:
+            self.widget_start_button.show()
+        else:
+            self.widget_start_button.hide()
 
     def event_word_not_found(self, player, word):
         logger.debug(f"{player} a proposé le mot: '{word}'")
         self.widget_proposed_words.add_items([word])
 
     def event_countdown_starting(self, seconds):
-        logger.info(f"starting in {seconds} seconds")
+        logger.info(f"départ dans {seconds} secondes")
 
     def event_countdown_ending(self, seconds):
         logger.info(f"ending in {seconds} seconds")
@@ -359,6 +366,28 @@ class PictGame:
     def event_countdown_playing(self, seconds):
         #logger.info(f"ending in {seconds} seconds")
         self.widget_remaining_time.set_text(f"Temps : {seconds:02}")
+
+    def event_round_end(self, word, new_master):
+        # On aurait pu fusionner avec event_word_found
+        self._end_of_round()
+        self._message(f"Personne n'a trouvé le mot !\n"
+                      f"Il fallait deviner le mot '{word}'\n"
+                      f"C'est au tour de {new_master} de dessiner !")
+        if new_master == self.player_name:
+            self.widget_start_button.show()
+        else:
+            self.widget_start_button.hide()
+
+    def _end_of_round(self):
+        self.canvas_window.can_draw = False
+        self.game_started = False
+        self.widget_color_button.hide()
+        self.widget_clear_button.hide()
+        # if self.selected_game == self.player_name:
+        #     self.widget_start_button.show()
+        self.widget_word_entry.set_text('')
+        self.widget_word_label.hide()
+        self.widget_word_entry.hide()
 
     def get_pseudo(self):
         #pseudo = self.widget_name_entry.get_text()[len(PSEUDO_PROMPT):]
@@ -417,6 +446,7 @@ class PictGame:
             self.widget_create_button.hide()
 
     def start_game(self):
+        self.widget_game_list.hide()
         self.widget_create_button.hide()
         self.widget_start_button.hide()
         self.widget_join_button.hide()
@@ -429,6 +459,7 @@ class PictGame:
         self.widget_word_entry.show()
         logger.debug(f"Tu dois faire deviner le mot '{self.word2guess}'")
         self._set_status_bar_text()
+        self.clear_canvas() # efface les Canvas de tous les joueurs
 
     def join_game(self):
         self.widget_create_button.hide()
@@ -477,7 +508,10 @@ class PictGame:
                     pygame.quit()
                     quit()
 
-                self.manager.process_events(event)
+                try: # car il semble qu'il y ait des bugs dans pygame-gui ?
+                    self.manager.process_events(event)
+                except Exception as e:
+                    logger.debug(e)
 
                 # Saisie des EntryLines
                 if event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
@@ -524,11 +558,13 @@ class PictGame:
                     self.set_color(event.colour)
 
             with display_lock:
-                self.manager.update(time_delta)
-                self.window_surface.blit(self.background, (0, 0))
-                self.manager.draw_ui(self.window_surface)
-                pygame.display.update()
-
+                try:
+                    self.manager.update(time_delta)
+                    self.window_surface.blit(self.background, (0, 0))
+                    self.manager.draw_ui(self.window_surface)
+                    pygame.display.update()
+                except:
+                    pass
 
 if __name__ == "__main__":
     LOG_LEVEL = 'LOG_LEVEL'
