@@ -17,6 +17,7 @@ from player import Player
 from game import Game
 from protocol import Protocol
 from word_api import get_word
+from player import Player
 from settings import HOST, PORT, COUNTDOWN, GUESS_TIME
 
 
@@ -279,7 +280,7 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        player.game.word_to_guess = get_word()
+        player.game.word_to_guess = get_word(player.name)
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
@@ -319,9 +320,7 @@ class Server:
                 self._get_new_master(player.game)
                 player.game.started = False
                 for player_name in player.game.players:
-                    self.players[player_name].event_channel.send_word_found(player.name,
-                                                                            player.game.word_to_guess,
-                                                                            player.game.master_player)
+                    self.players[player_name].event_channel.send_word_found(player.name,player.game.word_to_guess,player.game.master_player)
             else:
                 for player_name in player.game.players:
                     self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
