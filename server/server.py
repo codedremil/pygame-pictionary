@@ -280,7 +280,7 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        player.game.word_to_guess = get_word(player.name)
+        player.game.word_to_guess = get_word(player.game.name)
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
