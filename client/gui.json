@@ -1,47 +1,40 @@
 {
     "defaults": {
-	    "colours": {
-		    "normal_text": "#FFFFFF"
-	    }
+        "colours": {
+            "normal_text": "#E3D5FF"
+        }
     },
     "button": {
         "colours": {
-            "normal_border": "White",
-            "normal_bg": "SlateGray",
-            "normal_text": "White"
+            "normal_border": "#9B5DE5",
+            "normal_bg": "#2D003D",
+            "normal_text": "#FF7CE5"
         }
     },
-    "status_bar":
-    {
-        "colours":
-        {
-            "normal_border": "#AAAAAA",
-            "filled_bar": "#f4251b",
-            "unfilled_bar": "#CCCCCC"
+    "status_bar": {
+        "colours": {
+            "normal_border": "#6A0DAD",
+            "filled_bar": "#DA00FF",
+            "unfilled_bar": "#3A003F"
         },
-        "misc":
-        {
+        "misc": {
             "follow_sprite_offset": "-5, 32",
             "border_width": "0"
         }
     },
-    "label":
-    {
-        "colours":
-        {
-            "dark_bg": "#25292e",
-            "normal_text": "#c5cbd8",
-            "text_shadow": "#505050"
+    "label": {
+        "colours": {
+            "dark_bg": "#14001A",
+            "normal_text": "#F4D9FF",
+            "text_shadow": "#600080"
         },
-        "font":
-        {
+        "font": {
             "name": "montserrat",
             "size": "12",
             "bold": "0",
             "italic": "0"
         },
-        "misc":
-        {
+        "misc": {
             "text_shadow": "1",
             "text_shadow_size": "1",
             "text_shadow_offset": "0,0"
