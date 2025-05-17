@@ -1,6 +1,7 @@
 '''
 Implémente l'interface graphique du jeu
 '''
+import json
 import sys
 import os
 import logging
@@ -16,13 +17,14 @@ sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
 from client import Client
 from protocol import Protocol
 from settings import HOST, PORT
+from load_gui import load_theme_and_create_manager
 from editable_canvas import EditableCanvas
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BG = BLACK
 FPS = 30
-WIDTH = 800
+WIDTH = 1000
 HEIGHT = 600
 
 # Dimensions des widgets
@@ -30,7 +32,7 @@ POPUP_WIDTH = 500
 POPUP_HEIGHT = 180
 PSEUDO_LABEL_WIDTH = 140
 SPACING = 3
-LEFT_MENU_WIDTH = 100
+LEFT_MENU_WIDTH = 150
 LABEL_HEIGHT = 30
 GAME_LIST_HEIGHT = 100
 PLAYER_LIST_HEIGHT = 140
@@ -48,6 +50,7 @@ BUTTON_HEIGHT = 20
 TOOLBAR_HEIGHT = 300
 COLOR_WIDTH = 400
 COLOR_HEIGHT = 400
+DROPDOWN_HEIGHT = 30
 
 PSEUDO_PROMPT = ' Indique ton pseudo: '
 WORD_PROMPT = 'Mot> '
@@ -77,6 +80,8 @@ class PictGame:
         self.game = None
         self.game_started = False
         self.status_bar = ""
+        self.active_theme = None
+        self.all_themes = None
         self.color = pygame.Color(255, 255, 255, 255)
         self.name_font = pygame.font.SysFont("comicsans", 80)
         self.title_font = pygame.font.SysFont("comicsans", 120)
@@ -87,8 +92,17 @@ class PictGame:
         self.background = pygame.Surface((self.width, self.height))
         self.background.fill(pygame.Color(BG))
 
+        # Charger le fichier de config pour connaître tous les thèmes disponibles
+        with open('gui.json', 'r') as f:
+            config_gui = json.load(f)
+
+        self.active_theme = config_gui.get("active_theme", "default")
+        self.all_themes = list(config_gui.get("themes", {}).keys())
+
+        theme_path = load_theme_and_create_manager(self.active_theme)
+
         # Création du Manager
-        self.manager = pygame_gui.UIManager((self.width, self.height), theme_path="gui.json")
+        self.manager = pygame_gui.UIManager((self.width, self.height), theme_path=theme_path)
         self.manager.set_locale('fr')
 
         # Pour la saisie du pseudo
@@ -255,6 +269,18 @@ class PictGame:
             text='Couleur',
         )
         self.widget_color_button.hide()
+
+        # Création d'un menu déroulant pour choisir le thème
+        w, h = LEFT_MENU_WIDTH, DROPDOWN_HEIGHT
+        self.widget_theme_dropdown = pygame_gui.elements.UIDropDownMenu(
+            options_list=self.all_themes,
+            starting_option=self.active_theme,
+            relative_rect=pygame.Rect((0, 0), (w, h)),
+            anchors={'top': 'top', 'top_target': self.widget_color_button},
+            manager=self.manager
+        )
+
+
 
     def _set_callbacks(self):
         self.network.set_callback(Protocol.EVENT_NEW_GAME, self.event_new_game)
@@ -556,6 +582,12 @@ class PictGame:
                 # Choix d'une couleur
                 if event.type == pygame_gui.UI_COLOUR_PICKER_COLOUR_PICKED:
                     self.set_color(event.colour)
+
+                # Choix d'un thème d'UI
+                if event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED and event.ui_element == self.widget_theme_dropdown:
+                    selected_theme = event.text
+                    logger.info(f"Changement de thème vers : {selected_theme}")
+                    self.manager.create_new_theme(load_theme_and_create_manager(selected_theme))
 
             with display_lock:
                 try:
