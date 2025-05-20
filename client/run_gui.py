@@ -84,6 +84,7 @@ class PictGame:
         self._build_interface()
         self.victory_sound = pygame.mixer.Sound(os.path.join("snd", "victory.wav"))
         self.failure_sound = pygame.mixer.Sound(os.path.join("snd", "failure.mp3"))
+        self.bell_sound = pygame.mixer.Sound(os.path.join("snd", "bell.wav"))
 
     def _build_interface(self):
         self.background = pygame.Surface((self.width, self.height))
@@ -361,6 +362,7 @@ class PictGame:
         self.widget_proposed_words.add_items([word])
 
     def event_countdown_starting(self, seconds):
+        self.bell_sound.play()
         logger.info(f"départ dans {seconds} secondes")
 
     def event_countdown_ending(self, seconds):
