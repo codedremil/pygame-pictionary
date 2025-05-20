@@ -18,7 +18,17 @@ dictionary = [
 def get_local_word():
     return choice(dictionary)
 
-def get_word():
+def get_word(guessed_words):
+    '''Assume word unicity for the same game'''
+    while True:
+        word = get_word2()
+        if word not in guessed_words:
+            guessed_words.append(word)
+            break
+
+    return word
+
+def get_word2():
     try:
         url = "https://random-words-api.vercel.app/word/french"
         resp = requests.get(url)

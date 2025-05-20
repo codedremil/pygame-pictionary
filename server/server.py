@@ -279,7 +279,7 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        player.game.word_to_guess = get_word()
+        player.game.word_to_guess = get_word(player.game.guessed_words)
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
@@ -353,7 +353,7 @@ class Server:
 
         # démarre un compte à rebours de la partie (on sort si qq'un a trouvé !)
         seconds = GUESS_TIME
-        while seconds and game.started:
+        while seconds >= 0 and game.started:
             with game.lock_players:
                 for player_name in game.players:
                     self.players[player_name].event_channel.send_event_countdown_playing(seconds)
