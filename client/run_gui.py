@@ -61,8 +61,8 @@ class PictGame:
     def __init__(self, width, height):
         pygame.init()
         pygame.font.init()
-        #pygame.mixer.init()
-        pygame.mixer.quit()
+        pygame.mixer.init()
+        #pygame.mixer.quit()
         pygame.display.set_caption('Pictionary en réseau')
 
         self.width = width 
@@ -82,6 +82,8 @@ class PictGame:
         self.title_font = pygame.font.SysFont("comicsans", 120)
         self.enter_font = pygame.font.SysFont("comicsans", 60)
         self._build_interface()
+        self.victory_sound = pygame.mixer.Sound(os.path.join("snd", "victory.wav"))
+        self.failure_sound = pygame.mixer.Sound(os.path.join("snd", "failure.mp3"))
 
     def _build_interface(self):
         self.background = pygame.Surface((self.width, self.height))
@@ -154,7 +156,7 @@ class PictGame:
         self.widget_remaining_time = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect((self.width - TIME_WIDTH, SPACING), (w, h)),
             manager=self.manager,
-            text=f'Temps : 00',
+            text='Temps : 00',
         )
 
         # Pour l'affichage des mots proposés
@@ -342,6 +344,7 @@ class PictGame:
                 logger.error(f"event_draw called with unknown action: {msg=}")
 
     def event_word_found(self, winner, word, new_master):
+        self.victory_sound.play()
         self._end_of_round()
         if self.player_name != winner:
             logger.debug(f"{winner} a trouvé le mot: '{word}'")
@@ -369,6 +372,7 @@ class PictGame:
 
     def event_round_end(self, word, new_master):
         # On aurait pu fusionner avec event_word_found
+        self.failure_sound.play()
         self._end_of_round()
         self._message(f"Personne n'a trouvé le mot !\n"
                       f"Il fallait deviner le mot '{word}'\n"
@@ -464,6 +468,7 @@ class PictGame:
     def join_game(self):
         self.widget_create_button.hide()
         self.widget_join_button.hide()
+        self.widget_start_button.hide()
         self.widget_leave_button.show()
         self.game = self.selected_game
         self._set_status_bar_text()
