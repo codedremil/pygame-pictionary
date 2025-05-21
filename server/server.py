@@ -159,12 +159,14 @@ class Server:
 
             if "cmd" not in msg:
                 logging.info("Command missing")
-                continue
+                #continue
+                break
 
             cmd = msg["cmd"]
             if cmd not in proto_commands:
                 logging.info(f"Unknown command: {cmd}")
-                continue
+                #continue
+                break
 
             proto_commands[cmd](self, player, proto, msg)
 
