@@ -283,16 +283,6 @@ class Server:
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
-        # Choix du joueur qui doit faire deviner le mot
-        # if player.game.master_player is None:
-        #     player.game.master_player = player.game.name
-        # else:
-        #     try:
-        #         idx = player.game.players.index(player.game.master_player)
-        #     except:
-        #         idx = 0
-        #     player.game.master_player = player.game.players[(idx + 1) % len(player.game.players)]
-
         # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
         player.game.countdown_thread.start()
@@ -362,20 +352,21 @@ class Server:
             seconds -= 1
 
         # Si game.started est faux, c'est que qq'un a trouvé sinon on avertit la fin du jeu!
-        self._get_new_master(game)
         if game.started:
+            self._get_new_master(game)
             game.started = False
             with game.lock_players:
                 for player_name in game.players:
                     self.players[player_name].event_channel.send_event_round_end(game.word_to_guess, game.master_player)
 
     def _get_new_master(self, game):
-            # Calcule le nom du prochain dessinateur
-            try:
-                idx = game.players.index(game.master_player)
-            except:
-                idx = 0
-            game.master_player = game.players[(idx + 1) % len(game.players)]
+        # Calcule le nom du prochain dessinateur
+        try:
+            idx = game.players.index(game.master_player)
+        except:
+            idx = -1
+
+        game.master_player = game.players[(idx + 1) % len(game.players)]
 
 # Liste des commandes
 proto_commands = {
