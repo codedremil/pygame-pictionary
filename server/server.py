@@ -244,7 +244,7 @@ class Server:
             # TODO: si le jeu a démarré et le dessin commencé, il faut envoyer le dessin courant !
             if game.started:
                 # le joueur qui vient de se connecter doit savoir que le jeu a démarré
-                player.event_channel.send_event_start_game()
+                player.event_channel.send_event_start_game(game.master_player)
 
 
     def recv_leave_game(self, player, proto, msg):
@@ -286,10 +286,6 @@ class Server:
         # démarre un thread pour le compte à rebours
         player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
         player.game.countdown_thread.start()
-
-        # Indique l'événement à tous les joueurs
-        #for player_name in player.game.players:
-        #    self.players[player_name].event_channel.send_event_start_game()
 
     def recv_guess_word(self, player, proto, msg):
         logging.debug("recv_guess_word")
