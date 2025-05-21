@@ -452,7 +452,6 @@ class PictGame:
             self.widget_create_button.hide()
 
     def start_game(self):
-        self.widget_game_list.hide()
         self.widget_create_button.hide()
         self.widget_start_button.hide()
         self.widget_join_button.hide()
