@@ -10,13 +10,13 @@ import random
 import threading
 import pygame
 import pygame_gui
+import configparser
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
 
 from client import Client
 from protocol import Protocol
-from settings import HOST, PORT
 from load_gui import load_theme_and_create_manager
 from editable_canvas import EditableCanvas
 
@@ -64,8 +64,8 @@ class PictGame:
     def __init__(self, width, height):
         pygame.init()
         pygame.font.init()
-        #pygame.mixer.init()
-        pygame.mixer.quit()
+        pygame.mixer.init()
+        #pygame.mixer.quit()
         pygame.display.set_caption('Pictionary en réseau')
 
         self.width = width 
@@ -86,7 +86,49 @@ class PictGame:
         self.name_font = pygame.font.SysFont("comicsans", 80)
         self.title_font = pygame.font.SysFont("comicsans", 120)
         self.enter_font = pygame.font.SysFont("comicsans", 60)
+        self._get_config()
         self._build_interface()
+
+    def _get_config(self):
+        default_values = {
+            'host': 'localhost',
+            'port': 5678,
+            'victory': 'victory.wav',
+            'failure': 'failure.mp3',
+            'ding': 'bell.wav',
+        }
+        self.server_host = default_values['host']
+        self.server_port = default_values['port']
+        self.victory_sound = default_values['victory']
+        self.failure_sound = default_values['failure']
+        self.ding_sound = default_values['ding']
+
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        try:
+            self.victory_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['victory']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.failure_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['failure']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.ding_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['ding']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.server_host = config['server']['host']
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.server_port = int(config['server']['port'])
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
 
     def _build_interface(self):
         self.background = pygame.Surface((self.width, self.height))
@@ -168,7 +210,7 @@ class PictGame:
         self.widget_remaining_time = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect((self.width - TIME_WIDTH, SPACING), (w, h)),
             manager=self.manager,
-            text=f'Temps : 00',
+            text='Temps : 00',
         )
 
         # Pour l'affichage des mots proposés
@@ -368,6 +410,7 @@ class PictGame:
                 logger.error(f"event_draw called with unknown action: {msg=}")
 
     def event_word_found(self, winner, word, new_master):
+        self.victory_sound.play()
         self._end_of_round()
         if self.player_name != winner:
             logger.debug(f"{winner} a trouvé le mot: '{word}'")
@@ -384,6 +427,7 @@ class PictGame:
         self.widget_proposed_words.add_items([word])
 
     def event_countdown_starting(self, seconds):
+        self.ding_sound.play()
         logger.info(f"départ dans {seconds} secondes")
 
     def event_countdown_ending(self, seconds):
@@ -395,6 +439,7 @@ class PictGame:
 
     def event_round_end(self, word, new_master):
         # On aurait pu fusionner avec event_word_found
+        self.failure_sound.play()
         self._end_of_round()
         self._message(f"Personne n'a trouvé le mot !\n"
                       f"Il fallait deviner le mot '{word}'\n"
@@ -421,7 +466,7 @@ class PictGame:
         if pseudo.lstrip(): # le pseudo ne peut être vide ou avec que des espaces
             self.player_name = pseudo
             try:
-                self.network = Client(self.player_name, HOST, PORT)
+                self.network = Client(self.player_name, self.server_host, self.server_port)
             except Exception as e:
                 self.network = None
                 logger.error(e)
@@ -472,7 +517,6 @@ class PictGame:
             self.widget_create_button.hide()
 
     def start_game(self):
-        self.widget_game_list.hide()
         self.widget_create_button.hide()
         self.widget_start_button.hide()
         self.widget_join_button.hide()
@@ -490,6 +534,7 @@ class PictGame:
     def join_game(self):
         self.widget_create_button.hide()
         self.widget_join_button.hide()
+        self.widget_start_button.hide()
         self.widget_leave_button.show()
         self.game = self.selected_game
         self._set_status_bar_text()

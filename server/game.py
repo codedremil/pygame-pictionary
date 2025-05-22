@@ -9,6 +9,7 @@ class Game:
         self.started = False
         self.word_to_guess = None
         self.players = []
+        self.guessed_words = []
         self.master_player = self.name # nom du joueur qui doit faire deviner un mot
         self.countdown_thread = None
         self.lock_players = threading.Lock()

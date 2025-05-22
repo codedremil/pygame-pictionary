@@ -4,6 +4,7 @@ Implémente le serveur de jeu
 import sys
 import os
 import time
+import configparser
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
@@ -17,14 +18,15 @@ from player import Player
 from game import Game
 from protocol import Protocol
 from word_api import get_word
-from settings import HOST, PORT, COUNTDOWN, GUESS_TIME
 
 
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port, countdown_time, guess_time):
         self.host = host
         self.port = port
         self.sock = None
+        self.countdown_time = countdown_time
+        self.guess_time = guess_time
         self.players = {}  # la clé est le nom
         self.lock_players = threading.Lock()
         self.games = {}  # la clé est le nom
@@ -159,12 +161,14 @@ class Server:
 
             if "cmd" not in msg:
                 logging.info("Command missing")
-                continue
+                #continue
+                break
 
             cmd = msg["cmd"]
             if cmd not in proto_commands:
                 logging.info(f"Unknown command: {cmd}")
-                continue
+                #continue
+                break
 
             proto_commands[cmd](self, player, proto, msg)
 
@@ -188,7 +192,11 @@ class Server:
         # Indique l'événement à tous les joueurs
         with self.lock_players:
             for player_name in self.players:
-                self.players[player_name].event_channel.send_event_new_game(player.name)
+                try:
+                    self.players[player_name].event_channel.send_event_new_game(player.name)
+                except Exception as e:
+                    logging.error(f"get_message: {e}")
+                    self.abort_player(player_name)
 
     def recv_list_game_players(self, player, proto, msg):
         logging.debug("recv_list_game_players called")
@@ -239,12 +247,16 @@ class Server:
 
             # Indique l'événement à tous les joueurs
             for player_name in game.players:
-                self.players[player_name].event_channel.send_event_join_game(player.name)
+                try:
+                    self.players[player_name].event_channel.send_event_join_game(player.name)
+                except Exception as e:
+                    logging.error(f"get_message: {e}")
+                    self.abort_player(player_name)
 
             # TODO: si le jeu a démarré et le dessin commencé, il faut envoyer le dessin courant !
             if game.started:
                 # le joueur qui vient de se connecter doit savoir que le jeu a démarré
-                player.event_channel.send_event_start_game()
+                player.event_channel.send_event_start_game(game.master_player)
 
 
     def recv_leave_game(self, player, proto, msg):
@@ -270,7 +282,11 @@ class Server:
 
             # Indique l'événement à tous les joueurs
             for player_name in game.players:
-                self.players[player_name].event_channel.send_event_leave_game(player.name)
+                try:
+                    self.players[player_name].event_channel.send_event_leave_game(player.name)
+                except Exception as e:
+                    logging.error(f"get_message: {e}")
+                    self.abort_player(player_name)
 
     def recv_start_game(self, player, proto, msg):
         logging.debug("recv_start_game called")
@@ -279,27 +295,13 @@ class Server:
             proto.send_message_error("Il manque le nom du jeu !")
             return
 
-        player.game.word_to_guess = get_word()
+        player.game.word_to_guess = get_word(player.game.guessed_words)
         proto.send_resp_start_game(player.game.word_to_guess)
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
-        # Choix du joueur qui doit faire deviner le mot
-        # if player.game.master_player is None:
-        #     player.game.master_player = player.game.name
-        # else:
-        #     try:
-        #         idx = player.game.players.index(player.game.master_player)
-        #     except:
-        #         idx = 0
-        #     player.game.master_player = player.game.players[(idx + 1) % len(player.game.players)]
-
         # démarre un thread pour le compte à rebours
-        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
+        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, self.countdown_time,))
         player.game.countdown_thread.start()
-
-        # Indique l'événement à tous les joueurs
-        #for player_name in player.game.players:
-        #    self.players[player_name].event_channel.send_event_start_game()
 
     def recv_guess_word(self, player, proto, msg):
         logging.debug("recv_guess_word")
@@ -319,12 +321,20 @@ class Server:
                 self._get_new_master(player.game)
                 player.game.started = False
                 for player_name in player.game.players:
-                    self.players[player_name].event_channel.send_word_found(player.name,
-                                                                            player.game.word_to_guess,
-                                                                            player.game.master_player)
+                    try:
+                        self.players[player_name].event_channel.send_word_found(player.name,
+                                                                                player.game.word_to_guess,
+                                                                                player.game.master_player)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
             else:
                 for player_name in player.game.players:
-                    self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
+                    try:
+                        self.players[player_name].event_channel.send_word_not_found(player.name, msg['word'])
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
 
     def recv_draw(self, player, proto, msg):
         logging.debug(f"recv_draw {msg=}")
@@ -333,13 +343,21 @@ class Server:
         with player.game.lock_players:
             for player_name in player.game.players:
                 if player.name != player_name:
-                    self.players[player_name].event_channel.send_event_draw(msg)
+                    try:
+                        self.players[player_name].event_channel.send_event_draw(msg)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
 
     def countdown(self, game, seconds):
         while seconds:
             with game.lock_players:
                 for player_name in game.players:
-                    self.players[player_name].event_channel.send_event_countdown_starting(seconds, game.master_player)
+                    try:
+                        self.players[player_name].event_channel.send_event_countdown_starting(seconds, game.master_player)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
 
             time.sleep(1)
             logging.debug(f"tick {seconds=}")
@@ -347,35 +365,52 @@ class Server:
 
         with game.lock_players:
             for player_name in game.players:
-                self.players[player_name].event_channel.send_event_start_game(game.master_player)
+                try:
+                    self.players[player_name].event_channel.send_event_start_game(game.master_player)
+                except Exception as e:
+                    logging.error(f"get_message: {e}")
+                    self.abort_player(player_name)
 
         game.started = True
 
         # démarre un compte à rebours de la partie (on sort si qq'un a trouvé !)
-        seconds = GUESS_TIME
-        while seconds and game.started:
+        seconds = self.guess_time
+        while seconds >= 0 and game.started:
             with game.lock_players:
                 for player_name in game.players:
-                    self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+                    try:
+                        self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
 
             time.sleep(1)
             seconds -= 1
 
         # Si game.started est faux, c'est que qq'un a trouvé sinon on avertit la fin du jeu!
-        self._get_new_master(game)
         if game.started:
+            self._get_new_master(game)
             game.started = False
             with game.lock_players:
                 for player_name in game.players:
-                    self.players[player_name].event_channel.send_event_round_end(game.word_to_guess, game.master_player)
+                    try:
+                        self.players[player_name].event_channel.send_event_round_end(game.word_to_guess, game.master_player)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
+
+    def abort_player(self, player_name):
+        '''Indique que le joueur a disparu et le supprimer du jeu'''
+        logging.info(f"Player {player_name} encountered a network problem")
 
     def _get_new_master(self, game):
-            # Calcule le nom du prochain dessinateur
-            try:
-                idx = game.players.index(game.master_player)
-            except:
-                idx = 0
-            game.master_player = game.players[(idx + 1) % len(game.players)]
+        # Calcule le nom du prochain dessinateur
+        try:
+            idx = game.players.index(game.master_player)
+        except:
+            idx = -1
+
+        game.master_player = game.players[(idx + 1) % len(game.players)]
 
 # Liste des commandes
 proto_commands = {
@@ -391,20 +426,51 @@ proto_commands = {
 }
 
 if __name__ == '__main__':
-    host = HOST
-    port = PORT
-    LOG_LEVEL = 'LOG_LEVEL'
-
-    log_level = logging.INFO
     levels = logging.getLevelNamesMapping()
 
-    if LOG_LEVEL in os.environ:
-        if os.environ[LOG_LEVEL] in levels:
-            log_level = levels[os.environ[LOG_LEVEL]]
+    default_values = {
+        'port': 5678,
+        'log_level': 'INFO',
+        'countdown': 10,
+        'guess_time': 60,
+    }
+    host = "0.0.0.0"
+    port = default_values['port']
+    log_level = default_values['log_level']
+    countdown = default_values['countdown']
+    guess_time = default_values['guess_time']
+
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    try:
+        port = int(config['global']['port'])
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
+
+    try:
+        countdown = int(config['global']['countdown'])
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
+
+    try:
+        guess_time = int(config['global']['guess_time'])
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
+
+    try:
+        log_level = config['global']['log_level']
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
+
+
+    log_level = levels[log_level]
+    if 'LOG_LEVEL' in os.environ:
+        if os.environ['LOG_LEVEL'] in levels:
+            log_level = levels[os.environ['LOG_LEVEL']]
 
     logging.basicConfig(level=log_level)
 
-    server = Server(host, port)
+    server = Server(host, port, countdown, guess_time)
     server.start()
 
 # EOF
