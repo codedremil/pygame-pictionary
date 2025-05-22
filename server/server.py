@@ -426,26 +426,47 @@ proto_commands = {
 }
 
 if __name__ == '__main__':
+    levels = logging.getLevelNamesMapping()
+
+    default_values = {
+        'port': 5678,
+        'log_level': 'INFO',
+        'countdown': 10,
+        'guess_time': 60,
+    }
+    host = "0.0.0.0"
+    port = default_values['port']
+    log_level = default_values['log_level']
+    countdown = default_values['countdown']
+    guess_time = default_values['guess_time']
+
     config = configparser.ConfigParser()
     config.read('config.ini')
     try:
-        host = "0.0.0.0"
         port = int(config['global']['port'])
-        countdown = config['global']['countdown']
-        guess_time = config['global']['guess_time']
     except Exception as e:
-        logging.error("Fichier de configuration config.ini incomplet")
-        logging.error(f"Il manque le paramètre {e}")
-        exit(1)
+        logging.error(f"{e} not in config.ini")
 
-    LOG_LEVEL = 'LOG_LEVEL'
+    try:
+        countdown = int(config['global']['countdown'])
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
 
-    log_level = logging.INFO
-    levels = logging.getLevelNamesMapping()
+    try:
+        guess_time = int(config['global']['guess_time'])
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
 
-    if LOG_LEVEL in os.environ:
-        if os.environ[LOG_LEVEL] in levels:
-            log_level = levels[os.environ[LOG_LEVEL]]
+    try:
+        log_level = config['global']['log_level']
+    except Exception as e:
+        logging.error(f"{e} not in config.ini")
+
+
+    log_level = levels[log_level]
+    if 'LOG_LEVEL' in os.environ:
+        if os.environ['LOG_LEVEL'] in levels:
+            log_level = levels[os.environ['LOG_LEVEL']]
 
     logging.basicConfig(level=log_level)
 
