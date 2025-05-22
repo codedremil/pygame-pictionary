@@ -9,13 +9,13 @@ import random
 import threading
 import pygame
 import pygame_gui
+import configparser
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
 
 from client import Client
 from protocol import Protocol
-from settings import HOST, PORT
 from editable_canvas import EditableCanvas
 
 BLACK = (0, 0, 0)
@@ -82,9 +82,19 @@ class PictGame:
         self.title_font = pygame.font.SysFont("comicsans", 120)
         self.enter_font = pygame.font.SysFont("comicsans", 60)
         self._build_interface()
-        self.victory_sound = pygame.mixer.Sound(os.path.join("snd", "victory.wav"))
-        self.failure_sound = pygame.mixer.Sound(os.path.join("snd", "failure.mp3"))
-        self.bell_sound = pygame.mixer.Sound(os.path.join("snd", "bell.wav"))
+
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        try:
+            self.victory_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['victory']))
+            self.failure_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['failure']))
+            self.bell_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['ding']))
+            self.server_host = config['server']['host']
+            self.server_port = int(config['server']['port'])
+        except Exception as e:
+            logging.error('Il manque des paramètres dans le fichier de configuration !')
+            logging.error(f"{e}")
+            exit(1)
 
     def _build_interface(self):
         self.background = pygame.Surface((self.width, self.height))
@@ -401,7 +411,7 @@ class PictGame:
         if pseudo.lstrip(): # le pseudo ne peut être vide ou avec que des espaces
             self.player_name = pseudo
             try:
-                self.network = Client(self.player_name, HOST, PORT)
+                self.network = Client(self.player_name, self.server_host, self.server_port)
             except Exception as e:
                 self.network = None
                 logger.error(e)
