@@ -4,6 +4,7 @@ Implémente le serveur de jeu
 import sys
 import os
 import time
+import configparser
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(base_dir, '..', 'common'))
@@ -17,14 +18,15 @@ from player import Player
 from game import Game
 from protocol import Protocol
 from word_api import get_word
-from settings import HOST, PORT, COUNTDOWN, GUESS_TIME
 
 
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port, countdown, guess_time):
         self.host = host
         self.port = port
         self.sock = None
+        self.countdown = countdown
+        self.guess_time = guess_time
         self.players = {}  # la clé est le nom
         self.lock_players = threading.Lock()
         self.games = {}  # la clé est le nom
@@ -298,7 +300,7 @@ class Server:
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
         # démarre un thread pour le compte à rebours
-        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, COUNTDOWN,))
+        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, self.countdown,))
         player.game.countdown_thread.start()
 
     def recv_guess_word(self, player, proto, msg):
@@ -372,7 +374,7 @@ class Server:
         game.started = True
 
         # démarre un compte à rebours de la partie (on sort si qq'un a trouvé !)
-        seconds = GUESS_TIME
+        seconds = self.guess_time
         while seconds >= 0 and game.started:
             with game.lock_players:
                 for player_name in game.players:
@@ -424,8 +426,18 @@ proto_commands = {
 }
 
 if __name__ == '__main__':
-    host = HOST
-    port = PORT
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    try:
+        host = "0.0.0.0"
+        port = int(config['global']['port'])
+        countdown = config['global']['countdown']
+        guess_time = config['global']['guess_time']
+    except Exception as e:
+        logging.error("Fichier de configuration config.ini incomplet")
+        logging.error(f"Il manque le paramètre {e}")
+        exit(1)
+
     LOG_LEVEL = 'LOG_LEVEL'
 
     log_level = logging.INFO
@@ -437,7 +449,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=log_level)
 
-    server = Server(host, port)
+    server = Server(host, port, countdown, guess_time)
     server.start()
 
 # EOF

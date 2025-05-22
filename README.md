@@ -9,6 +9,8 @@ $ cd server
 $ python server.py
 ```
 
+La configuration du serveur est dans le fichier `config.ini`.
+
 Le client est constitué d'une interface graphique lancée ainsi :
 
 ```
@@ -16,3 +18,4 @@ $ cd client
 $ python run_pict.py
 ```
 
+La configuration du client est dans le fichier `config.ini`.
