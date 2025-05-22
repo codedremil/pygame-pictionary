@@ -81,20 +81,49 @@ class PictGame:
         self.name_font = pygame.font.SysFont("comicsans", 80)
         self.title_font = pygame.font.SysFont("comicsans", 120)
         self.enter_font = pygame.font.SysFont("comicsans", 60)
+        self._get_config()
         self._build_interface()
+
+    def _get_config(self):
+        default_values = {
+            'host': 'localhost',
+            'port': 5678,
+            'victory': 'victory.wav',
+            'failure': 'failure.mp3',
+            'ding': 'bell.wav',
+        }
+        self.server_host = default_values['host']
+        self.server_port = default_values['port']
+        self.victory_sound = default_values['victory']
+        self.failure_sound = default_values['failure']
+        self.ding_sound = default_values['ding']
 
         config = configparser.ConfigParser()
         config.read('config.ini')
         try:
-            self.victory_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['victory']))
-            self.failure_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['failure']))
-            self.bell_sound = pygame.mixer.Sound(os.path.join("snd", config['sounds']['ding']))
+            self.victory_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['victory']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.failure_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['failure']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
+            self.ding_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['ding']))
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
             self.server_host = config['server']['host']
+        except Exception as e:
+            logging.error(f"{e} est absent du fichier de configuration")
+
+        try:
             self.server_port = int(config['server']['port'])
         except Exception as e:
-            logging.error('Il manque des paramètres dans le fichier de configuration !')
-            logging.error(f"{e}")
-            exit(1)
+            logging.error(f"{e} est absent du fichier de configuration")
 
     def _build_interface(self):
         self.background = pygame.Surface((self.width, self.height))
@@ -372,7 +401,7 @@ class PictGame:
         self.widget_proposed_words.add_items([word])
 
     def event_countdown_starting(self, seconds):
-        self.bell_sound.play()
+        self.ding_sound.play()
         logger.info(f"départ dans {seconds} secondes")
 
     def event_countdown_ending(self, seconds):
