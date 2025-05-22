@@ -21,11 +21,11 @@ from word_api import get_word
 
 
 class Server:
-    def __init__(self, host, port, countdown, guess_time):
+    def __init__(self, host, port, countdown_time, guess_time):
         self.host = host
         self.port = port
         self.sock = None
-        self.countdown = countdown
+        self.countdown_time = countdown_time
         self.guess_time = guess_time
         self.players = {}  # la clé est le nom
         self.lock_players = threading.Lock()
@@ -300,7 +300,7 @@ class Server:
         player.game.word_to_guess = unidecode(player.game.word_to_guess)
 
         # démarre un thread pour le compte à rebours
-        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, self.countdown,))
+        player.game.countdown_thread = threading.Thread(target=self.countdown, args=(player.game, self.countdown_time,))
         player.game.countdown_thread.start()
 
     def recv_guess_word(self, player, proto, msg):
