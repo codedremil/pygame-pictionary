@@ -140,8 +140,11 @@ class Server:
                         self.players[other_player_name].event_channel.send_event_leave_game(player_name)
                     break  # un seul jeu par joueur
 
-        # TODO: Si le joueur possède un jeu, il faut détruire le jeu s'il n'a pas démarré !?
+        # Si le joueur possède un jeu, il faut détruire le jeu s'il n'a pas démarré !?
         # Destruction du jeu côté serveur et côté joueurs
+        # Finalement, non: les autres joueurs peuvent continuer à jouer.
+        # Le pb, c'est que le joueur-créateur peut recréer une nouvelle partie à son nom ? Non, c'est testé dans recv_new_game()
+        '''
         with self.lock_games:
             if player_name in self.games:
                 logging.info(f"player {player_name} owned a game which is deleted")
@@ -150,6 +153,25 @@ class Server:
                         player.event_channel.send_event_end_game(player_name)
 
                 del self.games[player_name]
+        '''
+        self._remove_games()
+
+    def _remove_games(self):
+        # Si un jeu ne dispose plus de joueurs, il faut détruire le jeu !
+        games_to_be_deleted = []
+        with self.lock_games:
+            for game_name, game in self.games.items():
+                if len(game.players) == 0:
+                    games_to_be_deleted.append(game_name)
+
+            for game_name in games_to_be_deleted:
+                logging.info(f"game {game_name} has no player and is deleted")
+                del self.games[game_name]
+
+                # Avertit tous les joueurs restants que le jeu n'est plus disponible
+                with self.lock_players:
+                    for _, player in self.players.items():
+                        player.event_channel.send_event_end_game(game_name)
 
     def handle_protocol(self, player, proto):
         '''Gère les échanges avec un joueur'''
@@ -183,8 +205,12 @@ class Server:
     def recv_new_game(self, player, proto, msg):
         logging.debug("recv_new_game called")
         with self.lock_games:
-            # TODO: vérifie que le joueur n'a pas déjà créé une partie
-            # (normalement fait pas le Client mais il faut le faire aussi ici)
+            # Vérifie que le joueur n'a pas déjà créé une partie
+            # (normalement fait par le Client mais il faut le faire aussi ici)
+            if player.name in self.games:
+                proto.send_message_error("Une partie avec ce nom existe déjà !")
+                return
+
             self.games[player.name] = Game(player)
 
         proto.send_resp_new_game()
@@ -280,13 +306,14 @@ class Server:
             game.remove_player(player)
             proto.send_resp_leave_game()
 
-            # Indique l'événement à tous les joueurs
-            for player_name in game.players:
-                try:
-                    self.players[player_name].event_channel.send_event_leave_game(player.name)
-                except Exception as e:
-                    logging.error(f"get_message: {e}")
-                    self.abort_player(player_name)
+            # Indique l'événement à tous les joueurs sauf si le jeu a été détruit
+            if game and len(game.players):
+                for player_name in game.players:
+                    try:
+                        self.players[player_name].event_channel.send_event_leave_game(player.name)
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
 
     def recv_start_game(self, player, proto, msg):
         logging.debug("recv_start_game called")
@@ -402,6 +429,8 @@ class Server:
     def abort_player(self, player_name):
         '''Indique que le joueur a disparu et le supprimer du jeu'''
         logging.info(f"Player {player_name} encountered a network problem")
+        if player_name in self.players:
+            self.remove_player(self.players[player_name])
 
     def _get_new_master(self, game):
         # Calcule le nom du prochain dessinateur
