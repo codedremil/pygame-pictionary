@@ -1,50 +1,126 @@
 {
-    "defaults": {
-	    "colours": {
-		    "normal_text": "#FFFFFF"
-	    }
-    },
-    "button": {
-        "colours": {
-            "normal_border": "White",
-            "normal_bg": "SlateGray",
-            "normal_text": "White"
+    "active_theme": "gamer_green",
+    "themes": {
+        "default": {
+            "colours": { "normal_text": "#E0E0E0" },
+            "button": {
+                "normal_border": "#3B3B3B",
+                "normal_bg": "#1F1F1F",
+                "normal_text": "#FFFFFF"
+            },
+            "status_bar": {
+                "normal_border": "#3A3A3A",
+                "filled_bar": "#BBBBBB",
+                "unfilled_bar": "#2E2E2E"
+            },
+            "label": {
+                "dark_bg": "#202020",
+                "normal_text": "#F0F0F0",
+                "text_shadow": "#1A1A1A"
+            }
+        },
+        "neon_violet": {
+            "colours": { "normal_text": "#E3D5FF" },
+            "button": {
+                "normal_border": "#9B5DE5",
+                "normal_bg": "#2D003D",
+                "normal_text": "#FF7CE5"
+            },
+            "status_bar": {
+                "normal_border": "#6A0DAD",
+                "filled_bar": "#DA00FF",
+                "unfilled_bar": "#3A003F"
+            },
+            "label": {
+                "dark_bg": "#14001A",
+                "normal_text": "#F4D9FF",
+                "text_shadow": "#600080"
+            }
+        },
+        "solarized_dark": {
+            "colours": { "normal_text": "#93A1A1" },
+            "button": {
+                "normal_border": "#073642",
+                "normal_bg": "#002B36",
+                "normal_text": "#B58900"
+            },
+            "status_bar": {
+                "normal_border": "#586E75",
+                "filled_bar": "#268BD2",
+                "unfilled_bar": "#073642"
+            },
+            "label": {
+                "dark_bg": "#002B36",
+                "normal_text": "#839496",
+                "text_shadow": "#001F27"
+            }
+        },
+        "gamer_green": {
+            "colours": { "normal_text": "#D1FFD1" },
+            "button": {
+                "normal_border": "#00FF00",
+                "normal_bg": "#001A00",
+                "normal_text": "#00FF00"
+            },
+            "status_bar": {
+                "normal_border": "#004400",
+                "filled_bar": "#00FF00",
+                "unfilled_bar": "#003300"
+            },
+            "label": {
+                "dark_bg": "#000F00",
+                "normal_text": "#D1FFD1",
+                "text_shadow": "#00AA00"
+            }
+        },
+        "midnight_blue": {
+            "colours": { "normal_text": "#C5D9FF" },
+            "button": {
+                "normal_border": "#2B3A67",
+                "normal_bg": "#1B2134",
+                "normal_text": "#9DBEFF"
+            },
+            "status_bar": {
+                "normal_border": "#2F3D55",
+                "filled_bar": "#3D6EFF",
+                "unfilled_bar": "#1A2433"
+            },
+            "label": {
+                "dark_bg": "#101828",
+                "normal_text": "#C5D9FF",
+                "text_shadow": "#1F2F4A"
+            }
+        },
+        "crimson_dark": {
+            "colours": { "normal_text": "#FFCDD2" },
+            "button": {
+                "normal_border": "#8B0000",
+                "normal_bg": "#280000",
+                "normal_text": "#FF4C4C"
+            },
+            "status_bar": {
+                "normal_border": "#4B1C1C",
+                "filled_bar": "#FF1744",
+                "unfilled_bar": "#2A0000"
+            },
+            "label": {
+                "dark_bg": "#140000",
+                "normal_text": "#FFD6D6",
+                "text_shadow": "#600000"
+            }
         }
     },
-    "status_bar":
-    {
-        "colours":
-        {
-            "normal_border": "#AAAAAA",
-            "filled_bar": "#f4251b",
-            "unfilled_bar": "#CCCCCC"
-        },
-        "misc":
-        {
-            "follow_sprite_offset": "-5, 32",
-            "border_width": "0"
-        }
+    "font": {
+        "name": "montserrat",
+        "size": "12",
+        "bold": "0",
+        "italic": "0"
     },
-    "label":
-    {
-        "colours":
-        {
-            "dark_bg": "#25292e",
-            "normal_text": "#c5cbd8",
-            "text_shadow": "#505050"
-        },
-        "font":
-        {
-            "name": "montserrat",
-            "size": "12",
-            "bold": "0",
-            "italic": "0"
-        },
-        "misc":
-        {
-            "text_shadow": "1",
-            "text_shadow_size": "1",
-            "text_shadow_offset": "0,0"
-        }
+    "misc": {
+        "text_shadow": "1",
+        "text_shadow_size": "1",
+        "text_shadow_offset": "0,0",
+        "follow_sprite_offset": "-5, 32",
+        "border_width": "0"
     }
 }
