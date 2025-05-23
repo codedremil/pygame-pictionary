@@ -369,6 +369,14 @@ class PictGame:
 
     def event_end_game(self, game_name):
         logger.debug(f"game {game_name} ended")
+
+        # Si le jeu supprimé était le jeu sélectionné il faut aussi effacer le widget de la liste des joueurs
+        selected_game = self.widget_game_list.get_single_selection()
+        if selected_game == game_name:
+            # Clear player list
+            self.widget_player_list.set_item_list([])
+            self.widget_join_button.hide()
+
         self.widget_game_list.remove_items([game_name])
 
     def event_draw(self, msg):
@@ -594,7 +602,7 @@ class PictGame:
                     if event.ui_element == self.widget_clear_button and self.canvas_window.can_draw:
                         self.clear_canvas()
 
-                    # Choisi une couleur si c'est le joueur principal
+                    # Choisit une couleur si c'est le joueur principal
                     if event.ui_element == self.widget_color_button and self.canvas_window.can_draw:
                         self.pick_color()
 
