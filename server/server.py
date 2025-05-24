@@ -470,7 +470,8 @@ if __name__ == '__main__':
     guess_time = default_values['guess_time']
 
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config_path = os.path.join(base_dir, "config.ini")
+    config.read(config_path)
     try:
         port = int(config['global']['port'])
     except Exception as e:
