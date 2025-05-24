@@ -99,7 +99,8 @@ class PictGame:
         self.ding_sound = default_values['ding']
 
         config = configparser.ConfigParser()
-        config.read('config.ini')
+        config_path = os.path.join(base_dir, "config.ini")
+        config.read(config_path)
         try:
             self.victory_sound = pygame.mixer.Sound(os.path.join(base_dir, "snd", config['sounds']['victory']))
         except Exception as e:
