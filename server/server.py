@@ -130,7 +130,7 @@ class Server:
         with self.lock_players:
             del self.players[player_name]
 
-        # Supprime l'utilisateur de tous les jeux
+        # Supprime le joueur de tous les jeux
         with self.lock_games:
             for game_name, game in self.games.items():
                 if player_name in game.players:
@@ -140,20 +140,13 @@ class Server:
                         self.players[other_player_name].event_channel.send_event_leave_game(player_name)
                     break  # un seul jeu par joueur
 
-        # Si le joueur possède un jeu, il faut détruire le jeu s'il n'a pas démarré !?
-        # Destruction du jeu côté serveur et côté joueurs
-        # Finalement, non: les autres joueurs peuvent continuer à jouer.
-        # Le pb, c'est que le joueur-créateur peut recréer une nouvelle partie à son nom ? Non, c'est testé dans recv_new_game()
-        '''
-        with self.lock_games:
-            if player_name in self.games:
-                logging.info(f"player {player_name} owned a game which is deleted")
-                with self.lock_players:
-                    for _, player in self.players.items():
-                        player.event_channel.send_event_end_game(player_name)
+        # Si le joueur était maitre d'un jeu, il faut avertir les autres joueurs
+        # et choisir un nouveau maitre
+        if player.game and player.game.master_player == player_name:
+            # TODO: avertir les autres et choisir un nouveau master
+            # Il faut arrêter les comptes à rebours éventuels !
+            logging.info(f"player was a game master !")
 
-                del self.games[player_name]
-        '''
         self._remove_games()
 
     def _remove_games(self):
@@ -169,6 +162,7 @@ class Server:
                 del self.games[game_name]
 
                 # Avertit tous les joueurs restants que le jeu n'est plus disponible
+                # pour que leur IHM se mette à jour !
                 with self.lock_players:
                     for _, player in self.players.items():
                         player.event_channel.send_event_end_game(game_name)
