@@ -136,7 +136,8 @@ class PictGame:
         self.background.fill(pygame.Color(BG))
 
         # Charger le fichier de config pour connaître tous les thèmes disponibles
-        with open('gui.json', 'r') as f:
+        config_path = os.path.join(base_dir, "gui.json")
+        with open(config_path, 'r') as f:
             config_gui = json.load(f)
 
         self.active_theme = config_gui.get("active_theme", "default")

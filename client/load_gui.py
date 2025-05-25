@@ -2,7 +2,14 @@ import pygame_gui
 import json
 import os
 
+
+
 def load_theme_and_create_manager(active_theme, gui_config_path="gui.json"):
+    # Détermine le chemin absolu du fichier gui.json basé sur ce fichier source
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    gui_config_path = os.path.join(base_dir, gui_config_path)
+
+    # Lecture du fichier gui.json
     with open(gui_config_path, 'r') as file:
         config = json.load(file)
 
@@ -12,6 +19,7 @@ def load_theme_and_create_manager(active_theme, gui_config_path="gui.json"):
 
     theme = themes[active_theme]
 
+    # Structure pour pygame_gui
     pygame_gui_theme = {
         "defaults": {
             "colours": {
@@ -32,7 +40,7 @@ def load_theme_and_create_manager(active_theme, gui_config_path="gui.json"):
         }
     }
 
-    temp_theme_path = "active_theme.json"
+    temp_theme_path = os.path.join(base_dir, "active_theme.json")
     with open(temp_theme_path, 'w') as temp_file:
         json.dump(pygame_gui_theme, temp_file, indent=4)
 
