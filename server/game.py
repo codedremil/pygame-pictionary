@@ -7,6 +7,7 @@ class Game:
         '''le nom du jeu est le nom du joueur'''
         self.name = player.name
         self.started = False
+        self.aborted = False
         self.word_to_guess = None
         self.players = []
         self.guessed_words = []

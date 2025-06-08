@@ -143,9 +143,10 @@ class Server:
         # Si le joueur était maitre d'un jeu, il faut avertir les autres joueurs
         # et choisir un nouveau maitre
         if player.game and player.game.master_player == player_name:
-            # TODO: avertir les autres et choisir un nouveau master
+            # avertir les autres et choisir un nouveau master
             # Il faut arrêter les comptes à rebours éventuels !
             logging.info(f"player was a game master !")
+            player.game.aborted = True
 
         self._remove_games()
 
@@ -393,10 +394,16 @@ class Server:
                     self.abort_player(player_name)
 
         game.started = True
+        game.aborted = False
 
-        # démarre un compte à rebours de la partie (on sort si qq'un a trouvé !)
+        # démarre un compte à rebours de la partie 
+        # on sort si qq'un a trouvé ou bien si le jeu est avorté car le dessinateur n'est plus là
         seconds = self.guess_time
         while seconds >= 0 and game.started:
+            # Si le tour de jeu est avorté, il faut envoyer la fin du compte à rebours
+            if game.aborted:
+                seconds = 0
+
             with game.lock_players:
                 for player_name in game.players:
                     try:
@@ -421,7 +428,7 @@ class Server:
                         self.abort_player(player_name)
 
     def abort_player(self, player_name):
-        '''Indique que le joueur a disparu et le supprimer du jeu'''
+        '''Indique que le joueur a disparu et le supprime du jeu'''
         logging.info(f"Player {player_name} encountered a network problem")
         if player_name in self.players:
             self.remove_player(self.players[player_name])
@@ -433,7 +440,11 @@ class Server:
         except:
             idx = -1
 
-        game.master_player = game.players[(idx + 1) % len(game.players)]
+        # il se peut qu'il n'y ait plus de joueur
+        try:
+            game.master_player = game.players[(idx + 1) % len(game.players)]
+        except:
+            game.master_player = None
 
 # Liste des commandes
 proto_commands = {
