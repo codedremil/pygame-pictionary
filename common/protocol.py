@@ -22,9 +22,9 @@ class Protocol:
     CLI_SEND_DRAW = "CLI_SEND_DRAW"               # send = {x, y, color}
 
     # Réponses possibles (Serveur => Client)
-    SRV_RESP_LIST_PLAYERS = "SRV_RESP_LIST_PLAYERS"     # send = {count, names}
+    SRV_RESP_LIST_PLAYERS = "SRV_RESP_LIST_PLAYERS"     # send = {count, players}
     SRV_RESP_LIST_GAMES = "SRV_RESP_LIST_GAMES"         # send = {count, names}
-    SRV_RESP_LIST_GAME_PLAYERS = "SRV_RESP_LIST_GAME_PLAYERS"   # send = {count, names}
+    SRV_RESP_LIST_GAME_PLAYERS = "SRV_RESP_LIST_GAME_PLAYERS"   # send = {count, players}
     SRV_RESP_NEW_GAME = "SRV_RESP_NEW_GAME"         # send = {}
     SRV_RESP_START_GAME = "SRV_RESP_START_GAME"     # send = {word}  = word_to_guess
     SRV_RESP_GUESS_WORD = "SRV_RESP_GUESS_WORD"     # send = {ok/nok}
@@ -34,7 +34,7 @@ class Protocol:
     # Evenements possibles (Server => Client)
     EVENT_ERROR = "EVENT_ERROR"
     EVENT_NEW_GAME = "EVENT_NEW_GAME"     # send = {name}   # = game_name
-    EVENT_JOIN_GAME = "EVENT_JOIN_GAME"     # send = {name}   # = player_name
+    EVENT_JOIN_GAME = "EVENT_JOIN_GAME"     # send = {name, attrs}   # = player_name
     EVENT_LEAVE_GAME = "EVENT_LEAVE_GAME"   # send = {name}   # = player_name
     EVENT_START_GAME = "EVENT_START_GAME"   # send = {master_player}
     EVENT_END_GAME = "EVENT_END_GAME"       # send = {name} # game_name
@@ -45,6 +45,7 @@ class Protocol:
     EVENT_COUNTDOWN_ENDING = "EVENT_COUNTDOWN_ENDING"     # send {seconds}
     EVENT_COUNTDOWN_PLAYING = "EVENT_COUNTDOWN_PLAYING"     # send {seconds}
     EVENT_ROUND_END = "EVENT_ROUND_END" # send = {word, master_player}
+    EVENT_UPDATE_PLAYER = "EVENT_UPDATE_PLAYER" # send = {player, new_score}
 
 
     def __init__(self, conn):
@@ -132,8 +133,9 @@ class Protocol:
     def send_resp_join_game(self):
         self.send_message_ok({"cmd": Protocol.SRV_RESP_JOIN_GAME})
 
-    def send_resp_list_players(self, count, names):
-        self.send_message_ok({"cmd": Protocol.SRV_RESP_LIST_PLAYERS, "count": count, "names": names})
+    def send_resp_list_players(self, count, players):
+        '''players est un dictionnaire avec le nom du joueur comme clé. Contient le score.'''
+        self.send_message_ok({"cmd": Protocol.SRV_RESP_LIST_PLAYERS, "count": count, "players": dict(sorted(players.items()))})
 
     def send_resp_start_game(self, word):
         self.send_message_ok({"cmd": Protocol.SRV_RESP_START_GAME, "word": word})
@@ -141,8 +143,9 @@ class Protocol:
     def send_resp_leave_game(self):
         self.send_message_ok({"cmd": Protocol.SRV_RESP_LEAVE_GAME})
 
-    def send_resp_list_game_players(self, count, names):
-        self.send_message_ok({"cmd": Protocol.SRV_RESP_LIST_GAME_PLAYERS, "count": count, "names": names})
+    def send_resp_list_game_players(self, count, players):
+        '''players est un dictionnaire avec le nom du joueur comme clé. Contient le score.'''
+        self.send_message_ok({"cmd": Protocol.SRV_RESP_LIST_GAME_PLAYERS, "count": count, "players": dict(sorted(players.items()))})
 
     def send_resp_list_games(self, count, names):
         self.send_message_ok({"cmd": Protocol.SRV_RESP_LIST_GAMES, "count": count, "names": names})
@@ -157,8 +160,8 @@ class Protocol:
     def send_event_new_game(self, player_name):
         self.send_message_ok({"cmd": Protocol.EVENT_NEW_GAME, "name": player_name})
 
-    def send_event_join_game(self, player_name):
-        self.send_message_ok({"cmd": Protocol.EVENT_JOIN_GAME, "name": player_name})
+    def send_event_join_game(self, player_name, attrs):
+        self.send_message_ok({"cmd": Protocol.EVENT_JOIN_GAME, "name": player_name, "attrs": attrs})
 
     def send_event_leave_game(self, player_name):
         self.send_message_ok({"cmd": Protocol.EVENT_LEAVE_GAME, "name": player_name})
@@ -172,8 +175,8 @@ class Protocol:
     def send_event_guess_word(self, word):
         self.send_message_ok({"cmd": Protocol.EVENT_GUESS_WORD, "word": word})
 
-    def send_word_found(self, winner, word, new_master):
-        self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner, "master": new_master})
+    def send_word_found(self, winner, score, word, new_master):
+        self.send_message_ok({"cmd": Protocol.EVENT_WORD_FOUND, "word": word, "winner": winner, "score": score, "master": new_master})
 
     def send_word_not_found(self, player, word):
         self.send_message_ok({"cmd": Protocol.EVENT_WORD_NOT_FOUND, "word": word, "player": player})
@@ -196,3 +199,7 @@ class Protocol:
 
     def send_event_round_end(self, word, new_master):
         self.send_message_ok({"cmd": Protocol.EVENT_ROUND_END, "word": word, "master": new_master})
+
+    def send_event_update_player(self, player, new_attrs):
+        self.send_message_ok({"cmd": Protocol.EVENT_UPDATE_PLAYER, "player": player, "attrs": new_attrs})
+

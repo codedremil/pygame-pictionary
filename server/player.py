@@ -4,6 +4,7 @@ class Player:
         self.cmd_channel = proto
         self.event_channel = None
         self.game = None
+        self.score = 0
 
     def get_event_channel(self):
         return self.event_channel

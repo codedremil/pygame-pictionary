@@ -35,6 +35,7 @@ class Client:
             Protocol.EVENT_COUNTDOWN_ENDING: self.recv_event_countdown_ending,
             Protocol.EVENT_COUNTDOWN_PLAYING: self.recv_event_countdown_playing,
             Protocol.EVENT_ROUND_END: self.recv_event_round_end,
+            Protocol.EVENT_UPDATE_PLAYER: self.recv_event_update_player,
         }
         self.connect()
 
@@ -106,11 +107,11 @@ class Client:
         msg = self.cmd_channel.get_message()
         if not msg: return []
 
-        if msg['rc'] != "OK" or 'names' not in msg:
+        if msg['rc'] != "OK" or 'players' not in msg:
             logging.error("Protocol error (get_list_players): {msg}")
             return []
 
-        return msg['names']
+        return msg['players']
 
     def get_list_games(self):
         self.cmd_channel.send_list_games()
@@ -169,11 +170,11 @@ class Client:
         msg = self.cmd_channel.get_message()
         if not msg: return []
 
-        if msg['rc'] != "OK" or 'names' not in msg:
+        if msg['rc'] != "OK" or 'players' not in msg:
             logging.error("Protocol error (get_list_game_players): {msg}")
             return []
 
-        return msg['names']
+        return msg['players']
 
     def send_plot(self, x, y, color):
         '''color est un tuple (R, G, B)'''
@@ -210,11 +211,11 @@ class Client:
         self.callbacks[Protocol.EVENT_END_GAME]['func'](msg['name'])
 
     def recv_event_join_game(self, msg):
-        if msg['rc'] != "OK" or 'name' not in msg:
+        if msg['rc'] != "OK" or 'name' not in msg or 'attrs' not in msg:
             logging.error(f"Protocol error (recv_event_join_game): {msg}")
             return
 
-        self.callbacks[Protocol.EVENT_JOIN_GAME]['func'](msg['name'])
+        self.callbacks[Protocol.EVENT_JOIN_GAME]['func'](msg['name'], msg['attrs'])
 
     def recv_event_leave_game(self, msg):
         if msg['rc'] != "OK" or 'name' not in msg:
@@ -282,3 +283,10 @@ class Client:
             return
 
         self.callbacks[Protocol.EVENT_ROUND_END]['func'](msg['word'], msg['master'])
+
+    def recv_event_update_player(self, msg):
+        if msg['rc'] != 'OK' or 'player' not in msg or 'attrs' not in msg: 
+            logging.error(f"Protocol error (recv_event_update_master): {msg}")
+            return
+
+        self.callbacks[Protocol.EVENT_UPDATE_PLAYER]['func'](msg['player'], msg['attrs'])

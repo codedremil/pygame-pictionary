@@ -194,8 +194,13 @@ class Server:
     def recv_list_players(self, player, proto, msg):
         logging.debug("recv_list_players called")
         with self.lock_players:
-            names = list(self.players)
-            proto.send_resp_list_players(len(self.players), sorted(names))
+            #names = list(self.players)
+            #proto.send_resp_list_players(len(self.players), sorted(names))
+            players = {}
+            for player in self.players:
+                players[player] = {'score': player.score}
+
+            proto.send_resp_list_players(len(self.players), players)
 
     def recv_new_game(self, player, proto, msg):
         logging.debug("recv_new_game called")
@@ -233,9 +238,13 @@ class Server:
                 proto.send_message_error("Le nom du jeu est inconnu !")
                 return
 
+            players = {}
+            for player_name in self.games[game_name].players:
+                players[player_name] = {'score': self.players[player_name].score}
+
             proto.send_resp_list_game_players(
                 len(self.games[game_name].players),
-                self.games[game_name].players
+                players
             )
 
     def recv_list_games(self, player, proto, msg):
@@ -263,13 +272,14 @@ class Server:
 
             game = self.games[game_name]
             game.add_player(player)
+            player.score = 0
             # Répond au joueur
             proto.send_resp_join_game()
 
             # Indique l'événement à tous les joueurs
             for player_name in game.players:
                 try:
-                    self.players[player_name].event_channel.send_event_join_game(player.name)
+                    self.players[player_name].event_channel.send_event_join_game(player.name, {'score': player.score})
                 except Exception as e:
                     logging.error(f"get_message: {e}")
                     self.abort_player(player_name)
@@ -278,7 +288,6 @@ class Server:
             if game.started:
                 # le joueur qui vient de se connecter doit savoir que le jeu a démarré
                 player.event_channel.send_event_start_game(game.master_player)
-
 
     def recv_leave_game(self, player, proto, msg):
         logging.debug("recv_leave_game called")
@@ -334,8 +343,36 @@ class Server:
 
         logging.debug(f"{player.game.word_to_guess=}, {msg['word']=}")
         found = player.game.word_to_guess == unidecode(msg['word'])
+
         proto.send_resp_guess_word(found)
 
+        # Ajoute un point à celui qui a deviné et à celui qui a dessiné
+        with player.game.lock_players:
+            if found:
+                player.score += 1
+                logging.debug(f"send_update_player({player.name=}, {player.score=})")
+                for player_name in player.game.players:
+                    try:
+                        self.players[player_name].event_channel.send_event_update_player(player.name, {'score': player.score})
+                    except Exception as e:
+                        logging.error(f"get_message: {e}")
+                        self.abort_player(player_name)
+
+                try:
+                    self.players[player.game.master_player].score += 1
+                    logging.debug(f"send_update_player({player.game.master_player=}, {self.players[player.game.master_player].score=})")
+                    for player_name in player.game.players:
+                        try:
+                            self.players[player_name].event_channel.send_event_update_player(
+                                    player.game.master_player, 
+                                    {'score': self.players[player.game.master_player].score})
+                        except Exception as e:
+                            logging.error(f"get_message: {e}")
+                            self.abort_player(player_name)
+                except Exception as e:
+                    # ...il s'est peut-être déconnecté ?
+                    logging.error(f"get_message: {e}")
+            
         # Indique l'événement à tous les joueurs
         with player.game.lock_players:
             if found:
@@ -345,6 +382,7 @@ class Server:
                 for player_name in player.game.players:
                     try:
                         self.players[player_name].event_channel.send_word_found(player.name,
+                                                                                player.score,
                                                                                 player.game.word_to_guess,
                                                                                 player.game.master_player)
                     except Exception as e:

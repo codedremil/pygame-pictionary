@@ -79,6 +79,7 @@ class PictGame:
         self.selected_game = None # nom du jeu sélectionné dans la liste déroulante
         self.game = None
         self.game_started = False
+        self.current_game_players = None
         self.status_bar = ""
         self.active_theme = None
         self.all_themes = None
@@ -324,8 +325,6 @@ class PictGame:
             manager=self.manager
         )
 
-
-
     def _set_callbacks(self):
         self.network.set_callback(Protocol.EVENT_NEW_GAME, self.event_new_game)
         self.network.set_callback(Protocol.EVENT_JOIN_GAME, self.event_join_game)
@@ -339,6 +338,7 @@ class PictGame:
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_ENDING, self.event_countdown_ending)
         self.network.set_callback(Protocol.EVENT_COUNTDOWN_PLAYING, self.event_countdown_playing)
         self.network.set_callback(Protocol.EVENT_ROUND_END, self.event_round_end)
+        self.network.set_callback(Protocol.EVENT_UPDATE_PLAYER, self.event_update_player)
 
     def _get_status_bar_text(self):
         connected = "connecté" if self.network else "déconnecté"
@@ -365,19 +365,22 @@ class PictGame:
 
         self.widget_game_list.add_items([game_name])
 
-    def event_join_game(self, player_name):
+    def event_join_game(self, player_name, attrs):
         # Ajoute le joueur dans la liste
         if player_name != self.player_name:
             logger.info(f"{player_name} a rejoint le jeu !")
 
-        self.widget_player_list.add_items([player_name])
+        score = attrs['score']
+        self.widget_player_list.add_items([f"{player_name} ({score})"])
+        self.current_game_players[player_name] = attrs
 
     def event_leave_game(self, player_name):
         # Supprime le joueur de la liste
         if player_name != self.player_name:
             logger.info(f"{player_name} a quitté le jeu !")
 
-        self.widget_player_list.remove_items([player_name])
+        self.widget_player_list.remove_items([f"{player_name} ({self.current_game_players[player_name]['score']})"])
+        del self.current_game_players[player_name]
 
     def event_start_game(self, master_player):
         # Le jeu a démarré
@@ -406,6 +409,14 @@ class PictGame:
             self.widget_join_button.hide()
 
         self.widget_game_list.remove_items([game_name])
+
+    def event_update_player(self, player, attrs):
+        logger.info(f"event_update_player {player} {attrs}")
+        # Mettre à jour les infos du joueur dans la liste des joueurs !
+        # On n'a pas le choix, le widget est très pauvre: on recalcule le contenu complet
+        # et on met le widget à jour
+        self.current_game_players[player] = attrs
+        self.widget_player_list.set_item_list(self._players_with_score(self.current_game_players))
 
     def event_draw(self, msg):
         logger.debug(msg)
@@ -506,10 +517,11 @@ class PictGame:
     def select_game(self, game):
         self.selected_game = game
         logging.debug(f"Le jeu sélectionné est {self.selected_game}")
-        names = self.network.get_list_game_players(self.selected_game)
-        logging.debug(f"Il y a {len(names)} joueurs connectés:")
-        logging.debug(names)
-        self.widget_player_list.set_item_list(names)
+        players = self.network.get_list_game_players(self.selected_game)
+        logging.debug(f"Il y a {len(players)} joueurs connectés:")
+        logging.debug(players)
+        self.widget_player_list.set_item_list(self._players_with_score(players))
+        self.current_game_players = players
 
         # Si le jeu sélectionné est celui créé par le joueur: Démarrer, sinon Rejoindre
         if self.selected_game == self.player_name:
@@ -518,6 +530,13 @@ class PictGame:
         else:
             self.widget_start_button.hide()
             self.widget_join_button.show()
+
+    def _players_with_score(self, players):
+        names = []
+        for player, attrs in players.items():
+            names.append(f"{player} ({attrs['score']})")
+
+        return names
 
     def create_game(self):
         if self.network.new_game():
