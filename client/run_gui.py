@@ -379,8 +379,9 @@ class PictGame:
         if player_name != self.player_name:
             logger.info(f"{player_name} a quitté le jeu !")
 
-        self.widget_player_list.remove_items([f"{player_name} ({self.current_game_players[player_name]['score']})"])
-        del self.current_game_players[player_name]
+        if player_name in self.current_game_players:
+            self.widget_player_list.remove_items([f"{player_name} ({self.current_game_players[player_name]['score']})"])
+            del self.current_game_players[player_name]
 
     def event_start_game(self, master_player):
         # Le jeu a démarré
@@ -448,6 +449,8 @@ class PictGame:
         self.widget_proposed_words.add_items([word])
 
     def event_countdown_starting(self, seconds):
+        self.widget_proposed_words.set_item_list([])
+        self.widget_msg.clear()
         self.ding_sound.play()
         logger.info(f"départ dans {seconds} secondes")
 
@@ -504,6 +507,10 @@ class PictGame:
             self._set_status_bar_text()
 
     def guess_word(self):
+        # le dessinateur ne peut soumettre de mot !
+        if self.canvas_window.can_draw:
+            return
+
         #word = self.widget_word_entry.get_text()[len(WORD_PROMPT):]
         word = self.widget_word_entry.get_text()
         word = word.lstrip() # le mot ne peut être vide ou avec que des espaces
@@ -513,6 +520,8 @@ class PictGame:
             else:
                 logging.debug('Bravo, tu as trouvé !')
                 self._message('Bravo, tu as trouvé !')
+
+        self.widget_word_entry.clear()
 
     def select_game(self, game):
         self.selected_game = game
@@ -559,6 +568,8 @@ class PictGame:
         logger.debug(f"Tu dois faire deviner le mot '{self.word2guess}'")
         self._set_status_bar_text()
         self.clear_canvas() # efface les Canvas de tous les joueurs
+        # self.widget_proposed_words.set_item_list([])
+        # self.widget_msg.clear()
 
     def join_game(self):
         self.widget_create_button.hide()

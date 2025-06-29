@@ -108,12 +108,12 @@ class Server:
             logging.error(f"Exception in new_player {e}")
             traceback.print_stack()
             raise e
+        finally:
+            if player:
+                logging.info(f"player {player.name} removed")
+                self.remove_player(player)
 
-        if player:
-            logging.info(f"player {player.name} removed")
-            self.remove_player(player)
-
-        conn.close()
+            conn.close()
 
     def is_name_available(self, name):
         with self.lock_players:
@@ -125,6 +125,7 @@ class Server:
             self.players[player.name] = player
 
     def remove_player(self, player):
+        '''Supprime un joueur de la liste des joueurs'''
         player_name = player.name
         logging.debug(f"remove player {player_name}")
         with self.lock_players:
@@ -135,20 +136,24 @@ class Server:
             for game_name, game in self.games.items():
                 if player_name in game.players:
                     logging.debug(f"player is removed from game {game.name}")
-                    game.players.remove(player_name)  # pas de Lock
+                    #game.players.remove(player_name)  # pas de Lock
+                    game.remove_player(player)
                     for other_player_name in game.players:
                         self.players[other_player_name].event_channel.send_event_leave_game(player_name)
-                    break  # un seul jeu par joueur
+                    #break  # un seul jeu par joueur
 
+        self._abort_game(player)
+        self._remove_games()
+
+    def _abort_game(self, player):
         # Si le joueur était maitre d'un jeu, il faut avertir les autres joueurs
         # et choisir un nouveau maitre
-        if player.game and player.game.master_player == player_name:
+        logging.debug(f"_abort_game({player.name}), master is {player.game.master_player if player.game else 'no-game'}")
+        if player.game and player.game.master_player == player.name:
             # avertir les autres et choisir un nouveau master
             # Il faut arrêter les comptes à rebours éventuels !
             logging.info(f"player was a game master !")
             player.game.aborted = True
-
-        self._remove_games()
 
     def _remove_games(self):
         # Si un jeu ne dispose plus de joueurs, il faut détruire le jeu !
@@ -290,6 +295,7 @@ class Server:
                 player.event_channel.send_event_start_game(game.master_player)
 
     def recv_leave_game(self, player, proto, msg):
+        '''Supprime le joueur d'un jeu mais pas de la liste des joueurs'''
         logging.debug("recv_leave_game called")
         if "game_name" not in msg:
             logging.error("protocol error")
@@ -307,7 +313,6 @@ class Server:
                 return
 
             game = self.games[game_name]
-            game.remove_player(player)
             proto.send_resp_leave_game()
 
             # Indique l'événement à tous les joueurs sauf si le jeu a été détruit
@@ -318,6 +323,12 @@ class Server:
                     except Exception as e:
                         logging.error(f"get_message: {e}")
                         self.abort_player(player_name)
+
+                # et change de master éventuellement
+                self._abort_game(player)
+                self._remove_games()
+
+            game.remove_player(player)
 
     def recv_start_game(self, player, proto, msg):
         logging.debug("recv_start_game called")
@@ -398,6 +409,8 @@ class Server:
 
     def recv_draw(self, player, proto, msg):
         logging.debug(f"recv_draw {msg=}")
+        if not player.game: # test de consistence si le dessinateur a quitté le jeu
+            return
 
         # Indique l'événement à tous les autres joueurs
         with player.game.lock_players:
@@ -410,7 +423,10 @@ class Server:
                         self.abort_player(player_name)
 
     def countdown(self, game, seconds):
-        while seconds:
+        game.started = False
+        game.aborted = False
+
+        while seconds and not game.aborted:
             with game.lock_players:
                 for player_name in game.players:
                     try:
@@ -423,35 +439,35 @@ class Server:
             logging.debug(f"tick {seconds=}")
             seconds -= 1
 
-        with game.lock_players:
-            for player_name in game.players:
-                try:
-                    self.players[player_name].event_channel.send_event_start_game(game.master_player)
-                except Exception as e:
-                    logging.error(f"get_message: {e}")
-                    self.abort_player(player_name)
-
-        game.started = True
-        game.aborted = False
-
-        # démarre un compte à rebours de la partie 
-        # on sort si qq'un a trouvé ou bien si le jeu est avorté car le dessinateur n'est plus là
-        seconds = self.guess_time
-        while seconds >= 0 and game.started:
-            # Si le tour de jeu est avorté, il faut envoyer la fin du compte à rebours
-            if game.aborted:
-                seconds = 0
-
+        if not game.aborted:
             with game.lock_players:
                 for player_name in game.players:
                     try:
-                        self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+                        self.players[player_name].event_channel.send_event_start_game(game.master_player)
                     except Exception as e:
                         logging.error(f"get_message: {e}")
                         self.abort_player(player_name)
 
-            time.sleep(1)
-            seconds -= 1
+            game.started = True
+
+            # démarre un compte à rebours de la partie 
+            # on sort si qq'un a trouvé ou bien si le jeu est avorté car le dessinateur n'est plus là
+            seconds = self.guess_time
+            while seconds >= 0 and game.started:
+                # Si le tour de jeu est avorté, il faut envoyer la fin du compte à rebours
+                if game.aborted:
+                    seconds = 0
+
+                with game.lock_players:
+                    for player_name in game.players:
+                        try:
+                            self.players[player_name].event_channel.send_event_countdown_playing(seconds)
+                        except Exception as e:
+                            logging.error(f"get_message: {e}")
+                            self.abort_player(player_name)
+
+                time.sleep(1)
+                seconds -= 1
 
         # Si game.started est faux, c'est que qq'un a trouvé sinon on avertit la fin du jeu!
         if game.started:
@@ -473,6 +489,7 @@ class Server:
 
     def _get_new_master(self, game):
         # Calcule le nom du prochain dessinateur
+        logging.debug(f"_get_new_master() called, current master is {game.master_player}")
         try:
             idx = game.players.index(game.master_player)
         except:
@@ -483,6 +500,8 @@ class Server:
             game.master_player = game.players[(idx + 1) % len(game.players)]
         except:
             game.master_player = None
+
+        logging.debug(f"new master is {game.master_player}")
 
 # Liste des commandes
 proto_commands = {
